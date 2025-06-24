@@ -17,6 +17,7 @@ class ArrowGenerator:
         self.output_base = output_base
         self.domain_data = []
         self.fixed_domain_id = None
+        self.protein_coordinates = []
         
     def parse_w5_info(self):
         """Parse the w5_info file to extract domain and screw axis data"""
@@ -103,46 +104,151 @@ class ArrowGenerator:
         print(f"Fixed domain ID: {self.fixed_domain_id}")
         for i, domain in enumerate(self.domain_data):
             print(f"Domain {i+1}: ID={domain['domain_id']}, has_screw_axis={('screw_axis' in domain)}")
-                    
-    def create_arrow_atoms(self, domain_data: dict, start_atom_id: int = 1000) -> List[str]:
-        """Create PDB atom lines for an arrow visualization"""
+
+    def read_protein_coordinates(self):
+        """Read protein coordinates from PDB file to calculate proper arrow scaling"""
+        pdb_file = f"{self.output_base}.pdb"
+        if not os.path.exists(pdb_file):
+            print(f"Warning: PDB file {pdb_file} not found, using default arrow scaling")
+            return
+            
+        coordinates = []
+        try:
+            with open(pdb_file, 'r') as f:
+                for line in f:
+                    if line.startswith('ATOM') and line[12:16].strip() in ['CA', 'N', 'C']:
+                        x = float(line[30:38])
+                        y = float(line[38:46]) 
+                        z = float(line[46:54])
+                        coordinates.append([x, y, z])
+            
+            if coordinates:
+                self.protein_coordinates = np.array(coordinates)
+                print(f"Read {len(coordinates)} protein atoms for scaling")
+            else:
+                print("No suitable atoms found in PDB file")
+                
+        except Exception as e:
+            print(f"Error reading PDB file: {e}")
+
+    def calculate_arrow_length(self, screw_axis, point_on_axis):
+        """Calculate appropriate arrow length like axleng.f does"""
+        if len(self.protein_coordinates) == 0:
+            print("Using default arrow length (no protein coordinates)")
+            return 35.0  # Default shaft length
+            
+        # Normalize screw axis
+        unit_axis = screw_axis / np.linalg.norm(screw_axis)
+        
+        # Calculate projections of all protein atoms onto the screw axis
+        # This is equivalent to the dot product calculation in axleng.f
+        relative_coords = self.protein_coordinates - point_on_axis
+        projections = np.dot(relative_coords, unit_axis)
+        
+        # Find min and max projections
+        tmin = np.min(projections)
+        tmax = np.max(projections)
+        
+        # Add 10% padding on each end (like axleng.f does)
+        padding = (tmax - tmin) / 10.0
+        tmin_padded = tmin - padding
+        tmax_padded = tmax + padding
+        
+        # Total length along the axis
+        total_length = tmax_padded - tmin_padded
+        
+        print(f"Protein projection range: {tmin:.1f} to {tmax:.1f}")
+        print(f"With padding: {tmin_padded:.1f} to {tmax_padded:.1f}")
+        print(f"Calculated arrow shaft length: {total_length:.1f}Å")
+        
+        return total_length
+
+    def create_arrow_atoms(self, domain_data: dict, arrow_index: int, start_atom_id: int = 1000) -> List[str]:
+        """Create PDB atom lines for an arrow visualization with proper arrow head shape"""
         screw_axis = domain_data["screw_axis"]
         point_on_axis = domain_data["point_on_axis"]
         
         # Normalize the screw axis
         screw_axis = screw_axis / np.linalg.norm(screw_axis)
         
-        # Length of arrow components currently hardcoded - will need to change
-        arrow_length = 50.0  
-        shaft_length = 35.0  
-        head_length = 15.0   
-        spacing = 3
+        # Calculate appropriate arrow length based on protein size
+        shaft_length = self.calculate_arrow_length(screw_axis, point_on_axis)
+        head_length = max(8.0, shaft_length * 0.15)  # Head is 15% of shaft, minimum 8Å
+        shaft_spacing = 2.5
         
         pdb_lines = []
         atom_id = start_atom_id
-        res_id = start_atom_id // 100  # Use different residue IDs
         
-        # Create shaft atoms (every 2.5Å for smoother line)
-        n_shaft_atoms = int(shaft_length / spacing)
+        # Use widely separated residue IDs for each arrow to prevent cross-connections
+        shaft_res_id = 100 + arrow_index * 50
+        head_res_id = shaft_res_id + 20
+        
+        # Use different chain IDs for each arrow
+        chain_id = chr(ord('A') + arrow_index)
+        
+        # === CREATE SHAFT (linear) ===
+        n_shaft_atoms = int(shaft_length / shaft_spacing)
         for i in range(n_shaft_atoms):
-            t = -shaft_length/2 + i * spacing
+            t = -shaft_length/2 + i * shaft_spacing
             pos = point_on_axis + t * screw_axis
             
-            # Use different residue numbers for shaft vs head
-            pdb_line = f"ATOM  {atom_id:5d}  CA  SHF A{res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
+            pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
             pdb_lines.append(pdb_line)
             atom_id += 1
             
-        # Create arrowhead atoms (larger and more visible)
-        n_head_atoms = int(head_length / spacing)
-        for i in range(n_head_atoms):
-            t = shaft_length/2 + i * spacing
-            pos = point_on_axis + t * screw_axis
+        pdb_lines.append("TER")
+        
+        # === CREATE ARROW HEAD (cone shape) ===
+        # Create two perpendicular vectors to the screw axis for the cone base
+        # Find a vector not parallel to screw_axis
+        if abs(screw_axis[0]) < 0.9:
+            temp_vec = np.array([1.0, 0.0, 0.0])
+        else:
+            temp_vec = np.array([0.0, 1.0, 0.0])
+        
+        # Create perpendicular vectors using cross product
+        perp1 = np.cross(screw_axis, temp_vec)
+        perp1 = perp1 / np.linalg.norm(perp1)
+        perp2 = np.cross(screw_axis, perp1)
+        perp2 = perp2 / np.linalg.norm(perp2)
+        
+        # Arrow head starts at end of shaft
+        head_start_pos = point_on_axis + (shaft_length/2) * screw_axis
+        head_tip_pos = head_start_pos + head_length * screw_axis
+        
+        # Create cone structure
+        n_layers = 8  # Number of layers in the cone
+        n_points_per_layer = 8  # Points around each circular layer
+        
+        for layer in range(n_layers + 1):
+            # Position along the cone axis (0 = base, 1 = tip)
+            layer_progress = layer / n_layers
+            layer_pos = head_start_pos + layer_progress * head_length * screw_axis
             
-            # Different residue ID for head
-            pdb_line = f"ATOM  {atom_id:5d}  CA  ARH A{res_id+1:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 40.00           C"
-            pdb_lines.append(pdb_line)
-            atom_id += 1
+            # Radius decreases linearly from base to tip
+            max_radius = 2.5  # Maximum radius at base (smaller head)
+            layer_radius = max_radius * (1.0 - layer_progress)
+            
+            if layer == n_layers:
+                # Tip of arrow - single point
+                pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {layer_pos[0]:8.3f}{layer_pos[1]:8.3f}{layer_pos[2]:8.3f}  1.00 50.00           C"
+                pdb_lines.append(pdb_line)
+                atom_id += 1
+            else:
+                # Create circular layer
+                for point in range(n_points_per_layer):
+                    angle = 2 * np.pi * point / n_points_per_layer
+                    
+                    # Calculate position on the circle
+                    circle_pos = (layer_pos + 
+                                 layer_radius * np.cos(angle) * perp1 + 
+                                 layer_radius * np.sin(angle) * perp2)
+                    
+                    pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {circle_pos[0]:8.3f}{circle_pos[1]:8.3f}{circle_pos[2]:8.3f}  1.00 40.00           C"
+                    pdb_lines.append(pdb_line)
+                    atom_id += 1
+        
+        pdb_lines.append("TER")
             
         return pdb_lines
     
@@ -151,24 +257,30 @@ class ArrowGenerator:
         if not self.domain_data:
             self.parse_w5_info()
             
+        # Read protein coordinates for proper scaling
+        self.read_protein_coordinates()
+            
         pdb_filename = f"{self.output_base}_arrows.pdb"
         
         pdb_lines = [
             "REMARK DynDom Arrow Visualization",
-            "REMARK Shaft atoms = SHF residues (fixed domain)",
-            "REMARK Head atoms = ARH residues (moving domain)",
+            "REMARK Shaft atoms = SHF residues",
+            "REMARK Head atoms = ARH residues", 
+            "REMARK Each arrow uses separate chain ID (A, B, C...)",
+            "REMARK Arrow length calculated from protein dimensions",
             "REMARK Generated from: " + self.w5_info_file,
         ]
         
         atom_id = 1000
         for i, domain in enumerate(self.domain_data):
             pdb_lines.append(f"REMARK Arrow {i+1}: Domain {domain['domain_id']} moving relative to fixed domain {self.fixed_domain_id}")
-            pdb_lines.append(f"REMARK   Rotation angle: {domain['rotation_angle']:.1f} degrees")
+            pdb_lines.append(f"REMARK   Chain {chr(ord('A') + i)}: Rotation angle: {domain['rotation_angle']:.1f} degrees")
             
-            arrow_atoms = self.create_arrow_atoms(domain, atom_id)
+            arrow_atoms = self.create_arrow_atoms(domain, i, atom_id)
             pdb_lines.extend(arrow_atoms)
-            pdb_lines.append("TER")
-            atom_id += 100  # Space out atom IDs
+            atom_id += 200  # Large gap between arrows to prevent any connections
+            
+        pdb_lines.append("END")
             
         # Write to file
         with open(pdb_filename, 'w') as f:
@@ -206,55 +318,73 @@ class ArrowGenerator:
         
         # Add arrow visualization for each domain
         for i, domain in enumerate(self.domain_data):
+            # FIXED COLOR MAPPING:
+            # Shaft should always be the FIXED domain color
+            # Head should be the MOVING domain color
             fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
             moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
             
-            res_id_base = (1000 + i*100) // 100  # Calculate residue ID base
+            # Use chain-specific selections to completely separate arrows
+            chain_id = chr(ord('A') + i)
+            shaft_res_id = 100 + i * 50
+            head_res_id = shaft_res_id + 20
             
             script_lines.extend([
-                f"# Arrow {i+1}: Domain {domain['domain_id']} -> Domain {self.fixed_domain_id}",
+                f"# Arrow {i+1}: Domain {domain['domain_id']} (moving) -> Domain {self.fixed_domain_id} (fixed)",
+                f"# Shaft color: {fixed_color} (fixed domain), Head color: {moving_color} (moving domain)",
                 f"# Rotation: {domain.get('rotation_angle', 'unknown'):.1f}°, Translation: {domain.get('translation', 'unknown'):.1f}Å",
                 f"",
-                f"# Select shaft and head atoms",
-                f"select shaft_{i+1}, resn SHF and resi {res_id_base}",
-                f"select head_{i+1}, resn ARH and resi {res_id_base+1}",
+                f"# Select shaft and head atoms by chain and residue",
+                f"select shaft_{i+1}, chain {chain_id} and resn SHF and resi {shaft_res_id}",
+                f"select head_{i+1}, chain {chain_id} and resn ARH and resi {head_res_id}",
                 f"",
-                f"# Display shaft (fixed domain color: {fixed_color})",
-                f"show spheres, shaft_{i+1}",
+                f"# Display shaft as thick stick (FIXED domain color: {fixed_color})",
                 f"show sticks, shaft_{i+1}",
+                f"show spheres, shaft_{i+1}",
                 f"color {fixed_color}, shaft_{i+1}",
-                f"set sphere_scale, 0.8, shaft_{i+1}",  # Larger spheres
-                f"set stick_radius, 0.3, shaft_{i+1}",  # Thicker sticks
+                f"set stick_radius, 0.2, shaft_{i+1}",
+                f"set sphere_scale, 0.2, shaft_{i+1}",
                 f"",
-                f"# Display head (moving domain color: {moving_color})",
+                f"# Display arrow head as solid surface (MOVING domain color: {moving_color})",
                 f"show spheres, head_{i+1}",
-                f"show sticks, head_{i+1}",
                 f"color {moving_color}, head_{i+1}",
-                f"set sphere_scale, 1.2, head_{i+1}",   # Even larger for head
-                f"set stick_radius, 0.5, head_{i+1}",   # Much thicker for head
+                f"set sphere_scale, 0.3, head_{i+1}",
+                f"set sphere_transparency, 0.2, head_{i+1}",
                 f"",
-                f"# Connect atoms within each section",
+                f"# Create custom arrow head surface",
+                f"set solvent_radius, 1.0",
+                f"show surface, head_{i+1}",
+                f"set surface_color, {moving_color}, head_{i+1}",
+                f"set surface_quality, 2, head_{i+1}",
+                f"set transparency, 0.3, head_{i+1}",
+                f"",
+                f"# Connect atoms ONLY within each section",
                 f"bond shaft_{i+1}, shaft_{i+1}",
                 f"bond head_{i+1}, head_{i+1}",
-                f"# Connect shaft to head",
-                f"bond (resi {res_id_base} and name CA), (resi {res_id_base+1} and name CA)",
                 f"",
             ])
             
         script_lines.extend([
+            "# Disable automatic bonding between different chains",
+            "set auto_bond, 0",
+            "",
             "# Make arrows more prominent",
             "set stick_transparency, 0.0",
-            "set sphere_transparency, 0.0",
             "set stick_quality, 15",
             "set sphere_quality, 3",
+            "set surface_quality, 2",
             "",
             "# Final settings",
             "bg_color white",
             "set depth_cue, 0",
-            "set ray_shadows, 0",
+            "set ray_shadows, 1",
+            "set ray_shadow_decay_factor, 0.1",
             "",
-            "# Show domain assignments on protein",
-            f"color {domain_colors[self.fixed_domain_id % len(domain_colors)]}, {self.output_base} and not (resn SHF or resn ARH)",
+            "# Better lighting for 3D arrow heads",
+            "set ambient, 0.2",
+            "set direct, 0.8",
+            "set reflect, 0.5",
+            "set shininess, 10",
             "",
             "# Center view",
             "zoom all",
@@ -264,14 +394,15 @@ class ArrowGenerator:
             "delete shaft_*",
             "delete head_*",
             "",
-            "print 'DynDom arrows loaded successfully!'",
+            "print 'DynDom arrows with 3D heads loaded successfully!'",
             f"print 'Fixed domain: {self.fixed_domain_id} ({domain_colors[self.fixed_domain_id % len(domain_colors)]})'",
         ])
         
         # Add info about each moving domain
         for i, domain in enumerate(self.domain_data):
             moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
-            script_lines.append(f"print 'Moving domain {domain['domain_id']}: {moving_color} arrow, {domain.get('rotation_angle', 0):.1f}° rotation'")
+            chain_id = chr(ord('A') + i)
+            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {moving_color} head with blue shaft, {domain.get('rotation_angle', 0):.1f}° rotation'")
         
         # Write script
         with open(pymol_filename, 'w') as f:
@@ -305,4 +436,3 @@ class ArrowGenerator:
             'pymol': pymol_file,
             'domains': len(self.domain_data)
         }
-
