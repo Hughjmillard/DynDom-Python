@@ -1,0 +1,16 @@
+REMARK DynDom Arrow Visualization
+REMARK Shaft atoms = SHF residues (fixed domain)
+REMARK Head atoms = ARH residues (moving domain)
+REMARK Generated from: output\1cts_A_2cts_A\1cts_A_2cts_A.w5_info
+REMARK Arrow 1: Domain 0 moving relative to fixed domain 1
+REMARK   Rotation angle: 19.1 degrees
+ATOM   1000  CA  SHF Z1000      55.814  33.924  28.845  1.00 20.00           C
+ATOM   1001  CA  SHF Z1001      54.524  35.874  30.725  1.00 20.00           C
+ATOM   1002  CA  SHF Z1002      53.235  37.823  32.606  1.00 20.00           C
+ATOM   1003  CA  SHF Z1003      51.945  39.773  34.486  1.00 20.00           C
+ATOM   1004  CA  SHF Z1004      50.656  41.722  36.367  1.00 20.00           C
+ATOM   1005  CA  ARH Z1005      49.366  43.672  38.247  1.00 20.00           C
+ATOM   1006  CA  ARH Z1006      48.828  44.484  39.031  1.00 20.00           C
+ATOM   1007  CA  ARH Z1007      48.291  45.296  39.814  1.00 20.00           C
+ATOM   1008  CA  ARH Z1008      47.754  46.109  40.598  1.00 20.00           C
+TER

@@ -1,0 +1,28 @@
+REMARK DynDom Arrow Visualization
+REMARK Shaft atoms = SHF residues (fixed domain)
+REMARK Head atoms = ARH residues (moving domain)
+REMARK Generated from: output\4ake_A_2eck_B\4ake_A_2eck_B.w5_info
+REMARK Arrow 1: Domain 0 moving relative to fixed domain 2
+REMARK   Rotation angle: 53.0 degrees
+ATOM   1000  CA  SHF Z1000      -0.531  -1.598 -32.989  1.00 20.00           C
+ATOM   1001  CA  SHF Z1001       0.396  -0.677 -30.289  1.00 20.00           C
+ATOM   1002  CA  SHF Z1002       1.323   0.244 -27.588  1.00 20.00           C
+ATOM   1003  CA  SHF Z1003       2.251   1.166 -24.888  1.00 20.00           C
+ATOM   1004  CA  SHF Z1004       3.178   2.087 -22.187  1.00 20.00           C
+ATOM   1005  CA  ARH Z1005       4.105   3.008 -19.487  1.00 20.00           C
+ATOM   1006  CA  ARH Z1006       4.491   3.392 -18.362  1.00 20.00           C
+ATOM   1007  CA  ARH Z1007       4.877   3.775 -17.237  1.00 20.00           C
+ATOM   1008  CA  ARH Z1008       5.264   4.159 -16.112  1.00 20.00           C
+TER
+REMARK Arrow 2: Domain 1 moving relative to fixed domain 2
+REMARK   Rotation angle: 46.1 degrees
+ATOM   1100  CA  SHF Z1100       1.442  -8.807  -3.510  1.00 20.00           C
+ATOM   1101  CA  SHF Z1101      -1.288  -8.261  -4.627  1.00 20.00           C
+ATOM   1102  CA  SHF Z1102      -4.019  -7.715  -5.743  1.00 20.00           C
+ATOM   1103  CA  SHF Z1103      -6.749  -7.169  -6.859  1.00 20.00           C
+ATOM   1104  CA  SHF Z1104      -9.480  -6.623  -7.975  1.00 20.00           C
+ATOM   1105  CA  ARH Z1105     -12.210  -6.077  -9.092  1.00 20.00           C
+ATOM   1106  CA  ARH Z1106     -13.348  -5.849  -9.557  1.00 20.00           C
+ATOM   1107  CA  ARH Z1107     -14.486  -5.622 -10.022  1.00 20.00           C
+ATOM   1108  CA  ARH Z1108     -15.624  -5.394 -10.487  1.00 20.00           C
+TER

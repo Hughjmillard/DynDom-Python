@@ -1,0 +1,27 @@
+REMARK DynDom Arrow Visualization
+REMARK Shaft atoms = SHF residues (fixed domain)
+REMARK Head atoms = ARH residues (moving domain)
+REMARK Generated from: output\1adg_A_2ohx_B\1adg_A_2ohx_B.w5_info
+REMARK Arrow 1: Domain 1 moving relative to fixed domain 0
+REMARK   Rotation angle: 10.0 degrees
+ATOM   1000  CA  SHF A  10      -5.336  17.580  39.512  1.00 30.00           C
+ATOM   1001  CA  SHF A  10      -3.454  17.855  37.889  1.00 30.00           C
+ATOM   1002  CA  SHF A  10      -1.572  18.130  36.267  1.00 30.00           C
+ATOM   1003  CA  SHF A  10       0.310  18.405  34.645  1.00 30.00           C
+ATOM   1004  CA  SHF A  10       2.192  18.680  33.023  1.00 30.00           C
+ATOM   1005  CA  SHF A  10       4.075  18.955  31.400  1.00 30.00           C
+ATOM   1006  CA  SHF A  10       5.957  19.230  29.778  1.00 30.00           C
+ATOM   1007  CA  SHF A  10       7.839  19.505  28.156  1.00 30.00           C
+ATOM   1008  CA  SHF A  10       9.721  19.780  26.534  1.00 30.00           C
+ATOM   1009  CA  SHF A  10      11.603  20.055  24.912  1.00 30.00           C
+ATOM   1010  CA  SHF A  10      13.486  20.330  23.289  1.00 30.00           C
+ATOM   1011  CA  SHF A  10      15.368  20.605  21.667  1.00 30.00           C
+ATOM   1012  CA  SHF A  10      17.250  20.880  20.045  1.00 30.00           C
+ATOM   1013  CA  SHF A  10      19.132  21.155  18.423  1.00 30.00           C
+ATOM   1014  CA  ARH A  11      21.014  21.430  16.800  1.00 40.00           C
+ATOM   1015  CA  ARH A  11      22.897  21.705  15.178  1.00 40.00           C
+ATOM   1016  CA  ARH A  11      24.779  21.980  13.556  1.00 40.00           C
+ATOM   1017  CA  ARH A  11      26.661  22.255  11.934  1.00 40.00           C
+ATOM   1018  CA  ARH A  11      28.543  22.530  10.311  1.00 40.00           C
+ATOM   1019  CA  ARH A  11      30.425  22.804   8.689  1.00 40.00           C
+TER
