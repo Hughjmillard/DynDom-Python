@@ -104,6 +104,13 @@ class ArrowGenerator:
         print(f"Fixed domain ID: {self.fixed_domain_id}")
         for i, domain in enumerate(self.domain_data):
             print(f"Domain {i+1}: ID={domain['domain_id']}, has_screw_axis={('screw_axis' in domain)}")
+            
+        # DEBUG: Print the actual color mappings
+        domain_colors = ["blue", "red", "yellow", "green", "orange", "purple", "pink"]
+        print(f"DEBUG: Fixed domain {self.fixed_domain_id} -> color index {(self.fixed_domain_id - 1) % len(domain_colors)} -> {domain_colors[(self.fixed_domain_id - 1) % len(domain_colors)]}")
+        for domain in self.domain_data:
+            print(f"DEBUG: Moving domain {domain['domain_id']} -> color index {(domain['domain_id'] - 1) % len(domain_colors)} -> {domain_colors[(domain['domain_id'] - 1) % len(domain_colors)]}")
+            
 
     def read_protein_coordinates(self):
         """Read protein coordinates from PDB file to calculate proper arrow scaling"""
@@ -176,8 +183,13 @@ class ArrowGenerator:
         screw_axis = screw_axis / np.linalg.norm(screw_axis)
         
         # Calculate appropriate arrow length based on protein size
-        shaft_length = self.calculate_arrow_length(screw_axis, point_on_axis)
+        base_shaft_length = self.calculate_arrow_length(screw_axis, point_on_axis)
         head_length = 8.0  # Slightly larger head length
+        
+        # Extend shaft backwards by 10% to balance the arrow head extension
+        shaft_extension = base_shaft_length * 0.1
+        total_shaft_length = base_shaft_length + shaft_extension
+        
         shaft_spacing = 1.0  # Even denser spacing for smoother shaft
         
         pdb_lines = []
@@ -190,10 +202,11 @@ class ArrowGenerator:
         # Use different chain IDs for each arrow
         chain_id = chr(ord('A') + arrow_index)
         
-        # === CREATE SHAFT (linear) ===
-        n_shaft_atoms = int(shaft_length / shaft_spacing)
+        # === CREATE SHAFT (linear, extended backwards) ===
+        n_shaft_atoms = int(total_shaft_length / shaft_spacing)
         for i in range(n_shaft_atoms):
-            t = -shaft_length/2 + i * shaft_spacing
+            # Start further back: -base_length/2 - extension, end at +base_length/2
+            t = -(base_shaft_length/2 + shaft_extension) + i * shaft_spacing
             pos = point_on_axis + t * screw_axis
             
             pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
@@ -202,7 +215,7 @@ class ArrowGenerator:
             
         pdb_lines.append("TER")
         
-        # === CREATE ARROW HEAD (smaller cone, better connected) ===
+        # === CREATE ARROW HEAD (overlapping with shaft end) ===
         # Create two perpendicular vectors to the screw axis for the cone base
         if abs(screw_axis[0]) < 0.9:
             temp_vec = np.array([1.0, 0.0, 0.0])
@@ -215,8 +228,9 @@ class ArrowGenerator:
         perp2 = np.cross(screw_axis, perp1)
         perp2 = perp2 / np.linalg.norm(perp2)
         
-        # Arrow head starts RIGHT at end of shaft (no gap)
-        head_start_pos = point_on_axis + (shaft_length/2) * screw_axis
+        # Arrow head starts INSIDE the shaft, overlapping the final portion
+        head_overlap = 3.0  # How far back into the shaft the head starts
+        head_start_pos = point_on_axis + (base_shaft_length/2 - head_overlap) * screw_axis
         
         # Create smaller, more compact cone structure
         n_layers = 5  # Fewer layers for smaller head
@@ -320,11 +334,19 @@ class ArrowGenerator:
         
         # Add arrow visualization for each domain
         for i, domain in enumerate(self.domain_data):
-            # CORRECTED COLOR MAPPING to match original DynDom:
-            # In original DynDom: shaft = moving domain color, head = fixed domain color
-            # This is OPPOSITE of what I had before!
-            moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
-            fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
+            # CORRECTED COLOR MAPPING FOR PYTHON DYNDOM:
+            # From your .w5_info: Fixed domain = 1, Moving domain = 0
+            # We want: Shaft = blue (fixed), Head = red (moving)
+            
+            domain_id = domain['domain_id']
+            fixed_id = self.fixed_domain_id
+            
+            # Direct mapping without special cases:
+            # Domain 0 -> index 0 -> blue
+            # Domain 1 -> index 1 -> red  
+            # Domain 2 -> index 2 -> yellow, etc.
+            moving_color = domain_colors[domain_id % len(domain_colors)]
+            fixed_color = domain_colors[fixed_id % len(domain_colors)]
             
             # Use chain-specific selections to completely separate arrows
             chain_id = chr(ord('A') + i)
@@ -392,10 +414,15 @@ class ArrowGenerator:
         
         # Add info about each moving domain
         for i, domain in enumerate(self.domain_data):
-            moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
-            fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
+            domain_id = domain['domain_id']
+            fixed_id = self.fixed_domain_id
+            
+            # Apply same direct mapping as above
+            moving_color = domain_colors[domain_id % len(domain_colors)]
+            fixed_color = domain_colors[fixed_id % len(domain_colors)]
+                
             chain_id = chr(ord('A') + i)
-            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {moving_color} shaft with {fixed_color} head, {domain.get('rotation_angle', 0):.1f}° rotation'")
+            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {fixed_color} shaft with {moving_color} head, {domain.get('rotation_angle', 0):.1f}° rotation'")
         
         # Write script
         with open(pymol_filename, 'w') as f:
@@ -429,3 +456,4 @@ class ArrowGenerator:
             'pymol': pymol_file,
             'domains': len(self.domain_data)
         }
+

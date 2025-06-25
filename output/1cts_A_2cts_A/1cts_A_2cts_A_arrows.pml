@@ -66,4 +66,4 @@ delete head_*
 
 print 'DynDom arrows with 3D heads loaded successfully!'
 print 'Fixed domain: 1 (red)'
-print 'Moving domain 0: Chain A, blue shaft with red head, 19.1° rotation'
+print 'Moving domain 0: Chain A, red shaft with blue head, 19.1° rotation'
