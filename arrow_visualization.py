@@ -135,7 +135,7 @@ class ArrowGenerator:
         """Calculate appropriate arrow length like axleng.f does"""
         if len(self.protein_coordinates) == 0:
             print("Using default arrow length (no protein coordinates)")
-            return 35.0  # Default shaft length
+            return 40.0  # Larger default shaft length
             
         # Normalize screw axis
         unit_axis = screw_axis / np.linalg.norm(screw_axis)
@@ -154,8 +154,12 @@ class ArrowGenerator:
         tmin_padded = tmin - padding
         tmax_padded = tmax + padding
         
-        # Total length along the axis
+        # Total length along the axis - this should be the FULL span
         total_length = tmax_padded - tmin_padded
+        
+        # Don't cap it too aggressively - let it be the protein size + 20%
+        total_length = max(total_length, 30.0)  # Minimum 30Å
+        # Remove the maximum cap to let it scale properly with large proteins
         
         print(f"Protein projection range: {tmin:.1f} to {tmax:.1f}")
         print(f"With padding: {tmin_padded:.1f} to {tmax_padded:.1f}")
@@ -164,7 +168,7 @@ class ArrowGenerator:
         return total_length
 
     def create_arrow_atoms(self, domain_data: dict, arrow_index: int, start_atom_id: int = 1000) -> List[str]:
-        """Create PDB atom lines for an arrow visualization with proper arrow head shape"""
+        """Create PDB atom lines for an arrow visualization with DynDom-style arrow head"""
         screw_axis = domain_data["screw_axis"]
         point_on_axis = domain_data["point_on_axis"]
         
@@ -173,8 +177,8 @@ class ArrowGenerator:
         
         # Calculate appropriate arrow length based on protein size
         shaft_length = self.calculate_arrow_length(screw_axis, point_on_axis)
-        head_length = max(8.0, shaft_length * 0.15)  # Head is 15% of shaft, minimum 8Å
-        shaft_spacing = 2.5
+        head_length = 8.0  # Slightly larger head length
+        shaft_spacing = 1.0  # Even denser spacing for smoother shaft
         
         pdb_lines = []
         atom_id = start_atom_id
@@ -198,9 +202,8 @@ class ArrowGenerator:
             
         pdb_lines.append("TER")
         
-        # === CREATE ARROW HEAD (cone shape) ===
+        # === CREATE ARROW HEAD (smaller cone, better connected) ===
         # Create two perpendicular vectors to the screw axis for the cone base
-        # Find a vector not parallel to screw_axis
         if abs(screw_axis[0]) < 0.9:
             temp_vec = np.array([1.0, 0.0, 0.0])
         else:
@@ -212,22 +215,21 @@ class ArrowGenerator:
         perp2 = np.cross(screw_axis, perp1)
         perp2 = perp2 / np.linalg.norm(perp2)
         
-        # Arrow head starts at end of shaft
+        # Arrow head starts RIGHT at end of shaft (no gap)
         head_start_pos = point_on_axis + (shaft_length/2) * screw_axis
-        head_tip_pos = head_start_pos + head_length * screw_axis
         
-        # Create cone structure
-        n_layers = 8  # Number of layers in the cone
-        n_points_per_layer = 8  # Points around each circular layer
+        # Create smaller, more compact cone structure
+        n_layers = 5  # Fewer layers for smaller head
+        n_points_per_layer = 6  # Fewer points per layer
         
         for layer in range(n_layers + 1):
             # Position along the cone axis (0 = base, 1 = tip)
             layer_progress = layer / n_layers
             layer_pos = head_start_pos + layer_progress * head_length * screw_axis
             
-            # Radius decreases linearly from base to tip
-            max_radius = 2.5  # Maximum radius at base (smaller head)
-            layer_radius = max_radius * (1.0 - layer_progress)
+            # Smaller radius that decreases more aggressively
+            max_radius = 1.8  # Much smaller maximum radius at base
+            layer_radius = max_radius * (1.0 - layer_progress) ** 1.5  # Faster taper
             
             if layer == n_layers:
                 # Tip of arrow - single point
@@ -318,11 +320,11 @@ class ArrowGenerator:
         
         # Add arrow visualization for each domain
         for i, domain in enumerate(self.domain_data):
-            # FIXED COLOR MAPPING:
-            # Shaft should always be the FIXED domain color
-            # Head should be the MOVING domain color
-            fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
+            # CORRECTED COLOR MAPPING to match original DynDom:
+            # In original DynDom: shaft = moving domain color, head = fixed domain color
+            # This is OPPOSITE of what I had before!
             moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
+            fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
             
             # Use chain-specific selections to completely separate arrows
             chain_id = chr(ord('A') + i)
@@ -331,32 +333,22 @@ class ArrowGenerator:
             
             script_lines.extend([
                 f"# Arrow {i+1}: Domain {domain['domain_id']} (moving) -> Domain {self.fixed_domain_id} (fixed)",
-                f"# Shaft color: {fixed_color} (fixed domain), Head color: {moving_color} (moving domain)",
+                f"# Shaft color: {moving_color} (moving domain), Head color: {fixed_color} (fixed domain)",
                 f"# Rotation: {domain.get('rotation_angle', 'unknown'):.1f}°, Translation: {domain.get('translation', 'unknown'):.1f}Å",
                 f"",
                 f"# Select shaft and head atoms by chain and residue",
                 f"select shaft_{i+1}, chain {chain_id} and resn SHF and resi {shaft_res_id}",
                 f"select head_{i+1}, chain {chain_id} and resn ARH and resi {head_res_id}",
                 f"",
-                f"# Display shaft as thick stick (FIXED domain color: {fixed_color})",
+                f"# Display shaft as thick licorice stick (MOVING domain color: {moving_color})",
                 f"show sticks, shaft_{i+1}",
-                f"show spheres, shaft_{i+1}",
-                f"color {fixed_color}, shaft_{i+1}",
-                f"set stick_radius, 0.2, shaft_{i+1}",
-                f"set sphere_scale, 0.2, shaft_{i+1}",
+                f"color {moving_color}, shaft_{i+1}",
+                f"set stick_radius, 0.3, shaft_{i+1}",  # Thicker for licorice style
                 f"",
-                f"# Display arrow head as solid surface (MOVING domain color: {moving_color})",
-                f"show spheres, head_{i+1}",
-                f"color {moving_color}, head_{i+1}",
-                f"set sphere_scale, 0.3, head_{i+1}",
-                f"set sphere_transparency, 0.2, head_{i+1}",
-                f"",
-                f"# Create custom arrow head surface",
-                f"set solvent_radius, 1.0",
-                f"show surface, head_{i+1}",
-                f"set surface_color, {moving_color}, head_{i+1}",
-                f"set surface_quality, 2, head_{i+1}",
-                f"set transparency, 0.3, head_{i+1}",
+                f"# Display arrow head as clean cone (FIXED domain color: {fixed_color})",
+                f"show sticks, head_{i+1}",
+                f"color {fixed_color}, head_{i+1}",
+                f"set stick_radius, 0.25, head_{i+1}",
                 f"",
                 f"# Connect atoms ONLY within each section",
                 f"bond shaft_{i+1}, shaft_{i+1}",
@@ -401,8 +393,9 @@ class ArrowGenerator:
         # Add info about each moving domain
         for i, domain in enumerate(self.domain_data):
             moving_color = domain_colors[domain['domain_id'] % len(domain_colors)]
+            fixed_color = domain_colors[self.fixed_domain_id % len(domain_colors)]
             chain_id = chr(ord('A') + i)
-            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {moving_color} head with blue shaft, {domain.get('rotation_angle', 0):.1f}° rotation'")
+            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {moving_color} shaft with {fixed_color} head, {domain.get('rotation_angle', 0):.1f}° rotation'")
         
         # Write script
         with open(pymol_filename, 'w') as f:
