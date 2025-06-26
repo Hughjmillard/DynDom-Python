@@ -231,6 +231,8 @@ class Engine:
                                                                                        fitted_protein_polymer,
                                                                                        ptype, gemmi.SupSelect.MainChain)
         fitted_protein_polymer.transform_pos_and_adp(self.chain_superimpose_result.transform)
+        # P
+        print(f'rmsd of whole protein best fit: {self.chain_superimpose_result.rmsd:.3f}A')
 
     def sliding_window_superimpose_residues(self):
         """

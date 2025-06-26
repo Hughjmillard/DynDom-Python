@@ -13,46 +13,48 @@ color gray80, output\1adg_A_2ohx_B\1adg_A_2ohx_B
 # Hide arrow atoms initially
 hide everything, 1adg_A_2ohx_B_arrows
 
-# Arrow 1: Domain 1 -> Domain 0
+# Arrow 1: Domain 1 (moving) -> Domain 0 (fixed)
+# Shaft color: red (moving domain), Head color: blue (fixed domain)
 # Rotation: 10.0°, Translation: -0.3Å
 
-# Select shaft and head atoms
-select shaft_1, resn SHF and resi 10
-select head_1, resn ARH and resi 11
+# Select shaft and head atoms by chain and residue
+select shaft_1, chain A and resn SHF and resi 100
+select head_1, chain A and resn ARH and resi 120
 
-# Display shaft (fixed domain color: blue)
-show spheres, shaft_1
+# Display shaft as thick licorice stick (MOVING domain color: red)
 show sticks, shaft_1
-color blue, shaft_1
-set sphere_scale, 0.8, shaft_1
+color red, shaft_1
 set stick_radius, 0.3, shaft_1
 
-# Display head (moving domain color: red)
-show spheres, head_1
+# Display arrow head as clean cone (FIXED domain color: blue)
 show sticks, head_1
-color red, head_1
-set sphere_scale, 1.2, head_1
-set stick_radius, 0.5, head_1
+color blue, head_1
+set stick_radius, 0.25, head_1
 
-# Connect atoms within each section
+# Connect atoms ONLY within each section
 bond shaft_1, shaft_1
 bond head_1, head_1
-# Connect shaft to head
-bond (resi 10 and name CA), (resi 11 and name CA)
+
+# Disable automatic bonding between different chains
+set auto_bond, 0
 
 # Make arrows more prominent
 set stick_transparency, 0.0
-set sphere_transparency, 0.0
 set stick_quality, 15
 set sphere_quality, 3
+set surface_quality, 2
 
 # Final settings
 bg_color white
 set depth_cue, 0
-set ray_shadows, 0
+set ray_shadows, 1
+set ray_shadow_decay_factor, 0.1
 
-# Show domain assignments on protein
-color blue, output\1adg_A_2ohx_B\1adg_A_2ohx_B and not (resn SHF or resn ARH)
+# Better lighting for 3D arrow heads
+set ambient, 0.2
+set direct, 0.8
+set reflect, 0.5
+set shininess, 10
 
 # Center view
 zoom all
@@ -62,6 +64,6 @@ orient
 delete shaft_*
 delete head_*
 
-print 'DynDom arrows loaded successfully!'
+print 'DynDom arrows with 3D heads loaded successfully!'
 print 'Fixed domain: 0 (blue)'
-print 'Moving domain 1: red arrow, 10.0° rotation'
+print 'Moving domain 1: Chain A, blue shaft with red head, 10.0° rotation'
