@@ -9,6 +9,7 @@ from Clusterer import Clusterer
 from Protein import Protein
 from scipy.spatial.transform import Rotation
 from arrow_visualization import ArrowGenerator
+from dyndom_comparison import SingleResidueBackbonePlusCBCalculator
 
 class Engine:
     def __init__(self, input_path, output_path, pdb_1, chain_1, pdb_2, chain_2, k_means_n_init=1, k_means_max_iter=500,
@@ -658,6 +659,121 @@ engine = Engine(input_path=files_dict["input_path"], output_path=files_dict["out
 # Run the Engine
 engine.run()
 
+def find_residue_by_sequence_number(protein, utilised_residues_indices, target_seq_num):
+    """
+    Find position in utilised_residues_indices for a specific sequence number
+    """
+    polymer = protein.get_polymer()
+    for i, residue_idx in enumerate(utilised_residues_indices):
+        residue = polymer[residue_idx]
+        if residue.seqid.num == target_seq_num:
+            return i
+    return None
+
+def run_manual_dyndom_comparison(engine, target_seq_num=None, target_position=None):
+    """
+    Run DynDom comparison for a specific residue
+    
+    Args:
+        engine: Your Engine object (after running)
+        target_seq_num: Specific residue sequence number (e.g., 156)
+        target_position: Specific position in utilised_residues_indices (e.g., 50)
+    """
+    print("\n" + "="*60)
+    print("DYNDOM FORTRAN COMPARISON ANALYSIS")
+    print("="*60)
+    
+    if engine.fitted_protein_2 is None:
+        print("Error: Must run engine analysis first")
+        return None
+    
+    calc = SingleResidueBackbonePlusCBCalculator(
+        engine.protein_1, 
+        engine.fitted_protein_2, 
+        window_size=engine.window
+    )
+    
+    # Determine target position
+    if target_seq_num is not None:
+        target_position = find_residue_by_sequence_number(
+            engine.protein_1, 
+            engine.protein_1.utilised_residues_indices, 
+            target_seq_num
+        )
+        if target_position is None:
+            print(f"Error: Residue {target_seq_num} not found in utilised residues")
+            return None
+        print(f"Found residue {target_seq_num} at position {target_position}")
+        
+    elif target_position is not None:
+        if target_position < 0 or target_position >= len(engine.protein_1.utilised_residues_indices):
+            print(f"Error: Position {target_position} out of range (0-{len(engine.protein_1.utilised_residues_indices)-1})")
+            return None
+        # Get the sequence number for this position
+        polymer = engine.protein_1.get_polymer()
+        residue_idx = engine.protein_1.utilised_residues_indices[target_position]
+        residue = polymer[residue_idx]
+        print(f"Analyzing position {target_position}: {residue.name} {residue.seqid.num}")
+        
+    else:
+        # Auto-find suitable residue
+        print("Auto-finding suitable residue (no glycines in window)...")
+        result = calc.find_and_calculate_suitable_residue(engine.protein_1.utilised_residues_indices)
+        if result:
+            print(f"Auto-selected: {result['target_residue_info']['residue_name']} {result['target_residue_info']['residue_num']}")
+            print_comparison_results(result)
+        else:
+            print("No suitable residue found (all have glycine in sliding window)")
+        return result
+    
+    # Calculate for specified residue
+    try:
+        magnitude, rot_vector, window_info = calc.calculate_backbone_plus_cb_rotation(
+            target_position, 
+            engine.protein_1.utilised_residues_indices
+        )
+        
+        result = {
+            'target_position': target_position,
+            'target_residue_info': window_info['target_residue'],
+            'rotation_magnitude': magnitude,
+            'rotation_vector': rot_vector,
+            'window_info': window_info
+        }
+        
+        print_comparison_results(result)
+        return result
+        
+    except ValueError as e:
+        print(f"Error calculating rotation: {e}")
+        if "glycine" in str(e).lower() or "cb" in str(e).lower():
+            print("Hint: Try a different residue that doesn't have glycine in its sliding window")
+        return None
+
+def print_comparison_results(result):
+    """Print formatted comparison results"""
+    print(f"Target residue: {result['target_residue_info']['residue_name']} {result['target_residue_info']['residue_num']}")
+    print(f"Position in analysis: {result['target_position']}")
+    print(f"Window size: {result['window_info']['window_size']}")
+    print(f"Atoms per residue: {result['window_info']['atoms_per_residue']} ({result['window_info']['atom_types']})")
+    print(f"Total atoms used: {result['window_info']['total_atoms_used']}")
+    print()
+    print("RESULTS FOR FORTRAN DYNDOM COMPARISON:")
+    print(f"Rotation magnitude: {result['rotation_magnitude']:.6f} degrees")
+    print(f"Rotation vector: [{result['rotation_vector'][0]:.6f}, {result['rotation_vector'][1]:.6f}, {result['rotation_vector'][2]:.6f}]")
+    print(f"Window RMSD: {result['window_info']['rmsd']:.6f}Å")
+    print()
+    print("FOR QUICK COMPARISON:")
+    print(f"Magnitude: {result['rotation_magnitude']:.6f}")
+    print(f"Vector:    [{result['rotation_vector'][0]:.6f}, {result['rotation_vector'][1]:.6f}, {result['rotation_vector'][2]:.6f}]")
+    print()
+    print(f"Window residues:")
+    for res_info in result['window_info']['residue_info']:
+        marker = " <-- TARGET" if res_info['is_target'] else ""
+        atoms_str = ",".join(res_info['atoms_found'])
+        print(f"  {res_info['residue_name']} {res_info['residue_num']} ({atoms_str}){marker}")
+
+result = run_manual_dyndom_comparison(engine, target_seq_num=28)
 
 # Generate arrow visualizations if analysis was successful
 try:
