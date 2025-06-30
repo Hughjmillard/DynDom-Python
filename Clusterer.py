@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 import numpy as np
 import gemmi
@@ -7,11 +8,13 @@ from Domain import Domain
 from sklearn.cluster import KMeans
 from itertools import groupby
 from operator import itemgetter
+from clustering_logger import ClusteringLogger
 
 
 class Clusterer:
+    
     def __init__(self, protein_1: Protein, protein_2: Protein, rotation_vectors: np.array, atoms_to_use, k_means_n_init=1,
-                 k_means_max_iter=500, window=5, domain=20, ratio=1.0):
+             k_means_max_iter=500, window=5, domain=20, ratio=1.0, enable_logging=True, log_dir="clustering_logs"):
         self.protein_1: Protein = protein_1
         self.protein_2: Protein = protein_2
         self.k_means_n_init = k_means_n_init
@@ -44,10 +47,19 @@ class Clusterer:
         self.valid_cluster_found = False
         # This condition determines whether a valid cluster contains domains that have valid domain pair ratio
         self.valid_domains_found = False
+        
+        # MODIFIED: Only create logger if enabled, otherwise set to None (will be assigned externally)
+        if enable_logging:
+            protein_name = f"{protein_1.name}_{protein_1.chain_param}_{protein_2.name}_{protein_2.chain_param}"
+            self.logger = ClusteringLogger(log_dir, protein_name)
+        else:
+            self.logger = None  # Will be assigned externally
+
 
     def cluster(self):
         fails = 0
         clusters = {0: self.rotation_vectors}
+        
         while self.current_k < self.max_k:
             print("============================================\n")
             print(f"current_k = {self.current_k}")
@@ -60,50 +72,191 @@ class Clusterer:
             temp_segments, cluster_residues_small = self.determine_segments()
             self.print_segments(temp_segments)
 
-            # If there is a cluster where its total residue is smaller than min domain size:
+            # Prepare variables for logging
+            temp_domains = None
+            cluster_break = False
+            ratios = None
+            ratio_not_met = False
+            decision = None
+            reason = None
 
+            # If there is a cluster where its total residue is smaller than min domain size:
             if cluster_residues_small and self.valid_domains_found:
                 # If there is a previous iteration where valid clusters and valid domain pair ratios are found, clustering
                 # can be halted
                 print("Found cluster with number of residues smaller than minimum domain size. Clustering halted. ")
                 print(f"Final clusterer to use: {self.valid_k}")
                 self.clusterer_status = 0
+                
+                # Log this final attempt
+                if self.logger:
+                    self.logger.log_k_attempt(
+                        k=self.current_k,
+                        window_size=self.window,
+                        domains=None,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=False,
+                        ratios=None,
+                        ratio_decision=None,
+                        decision='halt_success',
+                        reason=f'Cluster too small but previous valid solution exists (k={self.valid_k})'
+                    )
+
+                if self.logger:
+                    self.logger.log_final_result(
+                        final_k=self.valid_k if hasattr(self, 'valid_k') else None,
+                        final_domains=self.domains if hasattr(self, 'domains') else None,
+                        final_window=self.window,
+                        clusterer_status=self.clusterer_status,
+                        total_attempts=None
+                    )
                 return
+                
             if cluster_residues_small and not self.valid_cluster_found:
                 # If there are no previous iterations where domains have been found yet, skip to the next k value
                 print("Found cluster with number of residues smaller than minimum domain size. Going to next k value")
                 self.current_k += 1
                 fails += 1
+                
+                # Log this attempt
+                if self.logger:
+                    self.logger.log_k_attempt(
+                        k=self.current_k - 1,
+                        window_size=self.window,
+                        domains=None,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=False,
+                        ratios=None,
+                        ratio_decision=None,
+                        decision='reject_size_early',
+                        reason=f'Cluster too small, no previous valid solutions (fails={fails})'
+                    )
+                
                 if fails > 5:
                     print("Too many fails. Increasing window size by 2")
                     self.clusterer_status = -1
+                    
+                    # Log window size change
+                    if self.logger:
+                        self.logger.log_window_change(
+                            old_window=self.window,
+                            new_window=self.window + 2,
+                            reason=f'Too many consecutive failures ({fails})'
+                        )
+
+                    if self.logger:
+                        self.logger.log_final_result(
+                            final_k=None,
+                            final_domains=None,
+                            final_window=self.window,
+                            clusterer_status=self.clusterer_status,
+                            total_attempts=None
+                        )
                     return
                 continue
+                
             if cluster_residues_small and self.valid_cluster_found:
                 # If there was a previous iteration where a cluster had domains but the domain pair ratios are invalid,
                 # reset the clustering but this time increase the window size by 2.
                 print("Found cluster with number of residues smaller than minimum domain size. Valid cluster previously "
-                      "found but no domains. Increasing window size by 2")
+                    "found but no domains. Increasing window size by 2")
                 self.clusterer_status = -1
+                
+                # Log this attempt
+                if self.logger:
+                    self.logger.log_k_attempt(
+                        k=self.current_k,
+                        window_size=self.window,
+                        domains=None,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=False,
+                        ratios=None,
+                        ratio_decision=None,
+                        decision='reject_size_restart',
+                        reason='Cluster too small, had valid clusters before but no valid domains'
+                    )
+
+                if self.logger:
+                    self.logger.log_window_change(
+                        old_window=self.window,
+                        new_window=self.window + 2,
+                        reason='Valid clusters found before but no valid domains'
+                    )
+                
+                # Log final result before returning
+                if self.logger:
+                    self.logger.log_final_result(
+                        final_k=None,
+                        final_domains=None,
+                        final_window=self.window,
+                        clusterer_status=self.clusterer_status,
+                        total_attempts=None
+                    )
                 return
+                
             self.valid_cluster_found = True
             # Construct the domains from the clusters
             temp_domains, cluster_break = dom_build.domain_builder(self.protein_1, self.protein_2,
-                                                                   temp_segments, self.domain)
+                                                                temp_segments, self.domain)
 
             if cluster_break and self.valid_domains_found:
                 print("All domains found are smaller than minimum domain size. Clustering halted.")
                 self.clusterer_status = 0
+                
+                # Log this attempt
+                if self.logger:
+                    self.logger.log_k_attempt(
+                        k=self.current_k,
+                        window_size=self.window,
+                        domains=None,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=cluster_break,
+                        ratios=None,
+                        ratio_decision=None,
+                        decision='halt_domain_build',
+                        reason='Domain building failed but previous valid solution exists'
+                    )
+
+                if self.logger:
+                    self.logger.log_final_result(
+                        final_k=self.valid_k if hasattr(self, 'valid_k') else None,
+                        final_domains=self.domains if hasattr(self, 'domains') else None,
+                        final_window=self.window,
+                        clusterer_status=self.clusterer_status,
+                        total_attempts=None
+                    )
                 return
+                
             elif cluster_break and not self.valid_domains_found:
                 print("All domains in the cluster are less than minimum domain size. Increasing k by 1")
                 self.current_k += 1
+                
+                # Log this attempt
+                if self.logger:
+                    self.logger.log_k_attempt(
+                        k=self.current_k - 1,
+                        window_size=self.window,
+                        domains=None,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=cluster_break,
+                        ratios=None,
+                        ratio_decision=None,
+                        decision='reject_domain_build',
+                        reason='Domain building failed - all domains too small after connectivity analysis'
+                    )
                 continue
+                
             # self.print_domains(temp_domains_1, current_k)
             # Check which domain has the most number of connecting domains. That is the fixed domain
             temp_fixed_domain_id = self.find_fixed_domain(temp_domains)
 
             ratio_not_met = False
+            ratios = []
             # For each dynamic domain, calculate the ratio of interdomain to intradomain motion
             for domain in temp_domains:
                 # Ignore the fixed domain
@@ -113,12 +266,31 @@ class Clusterer:
                 r, transformed_1_domains_on_2 = self.mass_weighted_fit(domain, temp_domains[temp_fixed_domain_id])
                 # Check the ratio of interdomain to intradomain motion
                 ratio_met = self.check_ratios(transformed_1_domains_on_2, domain, temp_domains[temp_fixed_domain_id])
+                ratios.append(domain.ratio)  # Store the calculated ratio
+                
                 if not ratio_met:
                     ratio_not_met = True
                     print("Ratio not met")
                     break
+                    
             if ratio_not_met:
                 self.current_k += 1
+                
+                # Log this attempt
+                if self.logger:
+                    min_ratio = min(ratios) if ratios else 0
+                    self.logger.log_k_attempt(
+                        k=self.current_k - 1,
+                        window_size=self.window,
+                        domains=temp_domains,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=cluster_break,
+                        ratios=ratios,
+                        ratio_decision='fail',
+                        decision='reject_ratios',
+                        reason=f'Ratio validation failed (min: {min_ratio:.3f}, threshold: {self.ratio})'
+                    )
                 continue
             else:
                 # The first time that a k value produces valid domains for all clusters, set it to true
@@ -128,8 +300,35 @@ class Clusterer:
                 self.segments = temp_segments
                 self.valid_domains_found = True
                 self.valid_clusters = clusters
+                
+                # Log this successful attempt
+                if self.logger:
+                    avg_ratio = sum(ratios) / len(ratios) if ratios else 0
+                    self.logger.log_k_attempt(
+                        k=self.current_k,
+                        window_size=self.window,
+                        domains=temp_domains,
+                        cluster_segments=temp_segments,
+                        cluster_residues_small=cluster_residues_small,
+                        domain_build_failed=cluster_break,
+                        ratios=ratios,
+                        ratio_decision='pass',
+                        decision='accept',
+                        reason=f'All criteria met (avg ratio: {avg_ratio:.3f}, domains: {len(temp_domains)})'
+                    )
+                    
             self.current_k += 1
 
+        # If we exit the while loop without returning, log the final result
+        if self.logger:
+            self.logger.log_final_result(
+                final_k=self.valid_k if hasattr(self, 'valid_k') else None,
+                final_domains=self.domains if hasattr(self, 'domains') else None,
+                final_window=self.window,
+                clusterer_status=self.clusterer_status,
+                total_attempts=None
+            )
+            
     def calc_cluster_centroids(self, clusters: dict):
         """
         Find the initial cluster centroids before performing KMeans clustering.
