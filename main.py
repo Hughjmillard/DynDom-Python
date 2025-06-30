@@ -9,6 +9,7 @@ from Clusterer import Clusterer
 from Protein import Protein
 from scipy.spatial.transform import Rotation
 from arrow_visualization import ArrowGenerator
+from clustering_logger import ClusteringLogger
 
 class Engine:
     def __init__(self, input_path, output_path, pdb_1, chain_1, pdb_2, chain_2, k_means_n_init=1, k_means_max_iter=500,
@@ -48,6 +49,7 @@ class Engine:
         self.scaling = 0.0
         # Clusterer object
         self.clusterer = None
+        self.shared_logger = None
 
     def run(self):
         """
@@ -79,12 +81,31 @@ class Engine:
             FileMngr.write_rotation_vec_to_pdb(self.output_path, self.protein_1, self.protein_2.name, self.protein_2.chain_param, self.rotation_vecs)
             # self.print_unit_vectors()
             # Initialise the Clustering class
-            self.clusterer: Clusterer = Clusterer(self.protein_1, self.protein_2, self.rotation_vecs, self.atoms_to_use,
-                                                  self.k_means_n_init, self.k_means_max_iter, self.window, self.domain, self.ratio)
-            # CLuster the rotation vectors to find the domains
+            if not self.shared_logger:
+                output_base = f"{self.protein_1.name}_{self.protein_1.chain_param}_{self.protein_2.name}_{self.protein_2.chain_param}"
+                log_dir = os.path.join(self.output_path, output_base, "clustering_logs")
+                protein_name = f"{self.protein_1.name}_{self.protein_1.chain_param}_{self.protein_2.name}_{self.protein_2.chain_param}"
+                self.shared_logger = ClusteringLogger(log_dir, protein_name)
+            
+                # Create clusterer with logging disabled
+            self.clusterer: Clusterer = Clusterer(
+                self.protein_1, self.protein_2, self.rotation_vecs, self.atoms_to_use,
+                self.k_means_n_init, self.k_means_max_iter, self.window, self.domain, self.ratio,
+                enable_logging=False  # Disable internal logger
+            )
+            # Assign shared logger
+            self.clusterer.logger = self.shared_logger
+            
             self.clusterer.cluster()
             # print(f"Cluster status = {self.clusterer.clusterer_status}")
             if self.clusterer.clusterer_status == -1:
+                if self.shared_logger:
+                    self.shared_logger.log_window_change(
+                        old_window=self.window,
+                        new_window=self.window + 2,
+                        reason="Clustering failed, trying larger window"
+                    )
+                
                 self.window += 2
                 continue
             screws = self.determine_domains_screw_axis()
