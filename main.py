@@ -773,8 +773,8 @@ def print_comparison_results(result):
         atoms_str = ",".join(res_info['atoms_found'])
         print(f"  {res_info['residue_name']} {res_info['residue_num']} ({atoms_str}){marker}")
 
-result = run_manual_dyndom_comparison(engine, target_seq_num=28)
-
+result = run_manual_dyndom_comparison(engine, target_seq_num=7)
+print("Engine window size = ", engine.window)
 # Generate arrow visualizations if analysis was successful
 try:
     # Construct file paths based on your current naming convention

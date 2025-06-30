@@ -14,7 +14,8 @@ class SingleResidueBackbonePlusCBCalculator:
         """
         self.protein_1 = protein_1
         self.protein_2 = protein_2
-        self.window_size = window_size
+        #either window_size=5 or window_size=window_size
+        self.window_size = 5
         self.atoms_to_use = ["N", "CA", "C", "CB"]  # Original DynDom atom set
         
     def find_residue_without_nearby_glycine(self, utilised_residues_indices, min_distance=3):
