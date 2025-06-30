@@ -184,7 +184,7 @@ class ArrowGenerator:
         
         # Calculate appropriate arrow length based on protein size
         base_shaft_length = self.calculate_arrow_length(screw_axis, point_on_axis)
-        head_length = 8.0  # Slightly larger head length
+        head_length = 3.0  # Slightly larger head length
         
         # Extend shaft backwards by 10% to balance the arrow head extension
         shaft_extension = base_shaft_length * 0.1
@@ -229,11 +229,11 @@ class ArrowGenerator:
         perp2 = perp2 / np.linalg.norm(perp2)
         
         # Arrow head starts INSIDE the shaft, overlapping the final portion
-        head_overlap = 3.0  # How far back into the shaft the head starts
+        head_overlap = 2.0  # How far back into the shaft the head starts
         head_start_pos = point_on_axis + (base_shaft_length/2 - head_overlap) * screw_axis
         
         # Create smaller, more compact cone structure
-        n_layers = 5  # Fewer layers for smaller head
+        n_layers = 4  # Fewer layers for smaller head
         n_points_per_layer = 6  # Fewer points per layer
         
         for layer in range(n_layers + 1):
@@ -242,7 +242,7 @@ class ArrowGenerator:
             layer_pos = head_start_pos + layer_progress * head_length * screw_axis
             
             # Smaller radius that decreases more aggressively
-            max_radius = 1.8  # Much smaller maximum radius at base
+            max_radius = 1.2  # Much smaller maximum radius at base
             layer_radius = max_radius * (1.0 - layer_progress) ** 1.5  # Faster taper
             
             if layer == n_layers:

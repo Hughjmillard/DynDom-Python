@@ -5,13 +5,13 @@ input_path=data/pdb
 output_path=output
 #
 # WRITE FILENAME FOR 1ST CHAIN
-filename1=1cts
+filename1=1adg
 #
 # ONE LETTER CODE FOR 1ST CHAIN ID IF IT EXISTS, OTHERWISE LEAVE BLANK
 chain1id=A
 #
 # WRITE FILENAME FOR 2ND CHAIN, MAY BE SAME AS FIRST
-filename2=2cts
+filename2=2ohx
 #
 # ONE LETTER CODE FOR 2ND CHAIN ID
-chain2id=A
+chain2id=B
