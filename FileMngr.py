@@ -103,10 +103,10 @@ def write_rotation_vec_to_pdb(output_path, protein_1, protein_2_name, chain_2, r
             index = protein_1.utilised_residues_indices[i+slide_window_indices[0]]
             residue_name = protein_polymer[index].name
             residue_num = protein_polymer[index].seqid.num
-            x = str(round(rotation_vectors[i][0], 3)).rjust(8, " ")
-            y = str(round(rotation_vectors[i][1], 3)).rjust(8, " ")
-            z = str(round(rotation_vectors[i][2], 3)).rjust(8, " ")
-            row = f"ATOM         CA  {residue_name} A {residue_num}    {x}{y}{z}\n"
+            x = f"{rotation_vectors[i][0]:8.3f}"
+            y = f"{rotation_vectors[i][1]:8.3f}"
+            z = f"{rotation_vectors[i][2]:8.3f}"
+            row = f"ATOM  {i+1:5d}  CA  {residue_name:>3s} A{residue_num:4d}   {x}{y}{z}\n"
             fw.write(row)
         fw.close()
     except Exception as e:
@@ -132,43 +132,49 @@ def write_final_output_pdb(output_path, protein_1, fitted_protein_2, fitted_prot
         if not dir_path.exists():
             dir_path.mkdir(parents=True)
         fw = open(f"{dir_path_str}/{folder_name}.pdb", "w")
-        fw.write(f"MODEL{'1'.rjust(9, ' ')}\n")
-        protein_1_res_ind = protein_1.utilised_residues_indices
-        protein_1_residues = protein_1.get_polymer()
-        atom_count = 1
-        subchain = protein_1.chain_param
-        for i in protein_1_res_ind:
-            r = protein_1_residues[i]
-            res_name = r.name.rjust(3, " ")
-            res_num = str(r.seqid.num).rjust(4, " ")
-            for a in r:
-                atom_num = str(atom_count).rjust(5, " ")
-                atom_name = a.name.ljust(4, " ")
-                x = str(round(a.pos.x, 3)).rjust(8, " ")
-                y = str(round(a.pos.y, 3)).rjust(8, " ")
-                z = str(round(a.pos.z, 3)).rjust(8, " ")
-                row = f"ATOM  {atom_num} {atom_name} {res_name} {subchain}{res_num}    {x}{y}{z}\n"
-                fw.write(row)
-                atom_count += 1
-        fw.write("ENDMDL\n")
-
-        fw.write(f"MODEL{'2'.rjust(9, ' ')}\n")
-        atom_count = 1
-        protein_2_residues = fitted_protein_2.get_polymer()
-        for i in fitted_protein_2_res_ind:
-            r = protein_2_residues[i]
-            res_name = r.name.rjust(3, " ")
-            res_num = str(r.seqid.num).rjust(4, " ")
-            for a in r:
-                atom_num = str(atom_count).rjust(5, " ")
-                atom_name = a.name.ljust(4, " ")
-                x = str(round(a.pos.x, 3)).rjust(8, " ")
-                y = str(round(a.pos.y, 3)).rjust(8, " ")
-                z = str(round(a.pos.z, 3)).rjust(8, " ")
-                row = f"ATOM  {atom_num} {atom_name} {res_name} {fitted_protein_2_chain}{res_num}    {x}{y}{z}\n"
-                fw.write(row)
-                atom_count += 1
-        fw.write("ENDMDL\n")
+        
+        # Define the protein data for each model
+        proteins_data = [
+            {
+                'model_num': 1,
+                'residues': protein_1.get_polymer(),
+                'res_indices': protein_1.utilised_residues_indices,
+                'chain': protein_1.chain_param
+            },
+            {
+                'model_num': 2,
+                'residues': fitted_protein_2.get_polymer(),
+                'res_indices': fitted_protein_2_res_ind,
+                'chain': fitted_protein_2_chain
+            }
+        ]
+        
+        # Write each model using the same logic
+        for protein_data in proteins_data:
+            fw.write(f"MODEL{protein_data['model_num']:>9}\n")
+            atom_count = 1
+            
+            for i in protein_data['res_indices']:
+                r = protein_data['residues'][i]
+                res_name = r.name.rjust(3, " ")
+                res_num = str(r.seqid.num).rjust(4, " ")
+                
+                for a in r:
+                    atom_num = f"{atom_count:5d}"
+                    atom_name = f"{a.name:<4s}"
+                    res_name = f"{r.name:>3s}"
+                    res_num = f"{r.seqid.num:4d}"
+                    x = f"{a.pos.x:8.3f}"
+                    y = f"{a.pos.y:8.3f}"
+                    z = f"{a.pos.z:8.3f}"
+                    row = f"ATOM  {atom_num} {atom_name} {res_name} {protein_data['chain']}{res_num}    {x}{y}{z}\n"
+                    fw.write(row)
+                    atom_count += 1
+            
+            fw.write("ENDMDL\n")
+        
+        fw.close()
+        
     except Exception as e:
         traceback.print_exc()
         print(e)
