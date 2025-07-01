@@ -199,7 +199,7 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
         all_bend_res_indices = []
         for b in bending_residues.values():
             for i in b:
-                bb = i+mid_point
+                bb = i  # FIXED: Segments are already in sliding window indices
                 index = polymer[bb].seqid.num
                 all_bend_res_indices.append(index)
 
@@ -207,7 +207,7 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
         for s in range(fixed_dom_segments.shape[0]):
             reg = []
             for i in range(fixed_dom_segments[s][0], fixed_dom_segments[s][1]+1):
-                j = i + mid_point
+                j = i  # FIXED: Segments are already in sliding window indices
                 index = util_res[j]
                 res_num = polymer[index].seqid.num
                 if res_num not in all_bend_res_indices:
@@ -236,7 +236,7 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
             for s in range(segments.shape[0]):
                 reg = []
                 for i in range(segments[s][0], segments[s][1]+1):
-                    j = i + mid_point
+                    j = i  # FIXED: Segments are already in sliding window indices
                     index = util_res[j]
                     res_num = polymer[index].seqid.num
                     if res_num not in dom_bend_res:
