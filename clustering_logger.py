@@ -102,7 +102,3 @@ class ClusteringLogger:
             f.write("=" * 60 + "\n")
         
         print(f"Clustering complete - see {self.log_file}")
-    
-    def cleanup_temp_files(self):
-        """Nothing to clean up in simple version."""
-        pass

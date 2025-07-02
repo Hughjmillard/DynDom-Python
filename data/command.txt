@@ -5,13 +5,13 @@ input_path=data/pdb
 output_path=output
 #
 # WRITE FILENAME FOR 1ST CHAIN
-filename1=1adg
+filename1=Calmodulin1
 #
 # ONE LETTER CODE FOR 1ST CHAIN ID IF IT EXISTS, OTHERWISE LEAVE BLANK
 chain1id=A
 #
 # WRITE FILENAME FOR 2ND CHAIN, MAY BE SAME AS FIRST
-filename2=2ohx
+filename2=Calmodulin2
 #
 # ONE LETTER CODE FOR 2ND CHAIN ID
 chain2id=B

@@ -334,19 +334,16 @@ class ArrowGenerator:
         
         # Add arrow visualization for each domain
         for i, domain in enumerate(self.domain_data):
-            # CORRECTED COLOR MAPPING FOR PYTHON DYNDOM:
-            # From your .w5_info: Fixed domain = 1, Moving domain = 0
-            # We want: Shaft = blue (fixed), Head = red (moving)
+            # CORRECTED COLOR MAPPING:
+            # Shaft represents the FIXED domain (stationary reference)
+            # Head represents the MOVING domain (what's moving relative to fixed)
             
-            domain_id = domain['domain_id']
-            fixed_id = self.fixed_domain_id
+            domain_id = domain['domain_id']  # moving domain
+            fixed_id = self.fixed_domain_id  # fixed domain
             
-            # Direct mapping without special cases:
-            # Domain 0 -> index 0 -> blue
-            # Domain 1 -> index 1 -> red  
-            # Domain 2 -> index 2 -> yellow, etc.
-            moving_color = domain_colors[domain_id % len(domain_colors)]
-            fixed_color = domain_colors[fixed_id % len(domain_colors)]
+            # Correct assignment: shaft = fixed, head = moving
+            shaft_color = domain_colors[fixed_id % len(domain_colors)]   # shaft = fixed domain color
+            head_color = domain_colors[domain_id % len(domain_colors)]   # head = moving domain color
             
             # Use chain-specific selections to completely separate arrows
             chain_id = chr(ord('A') + i)
@@ -354,22 +351,22 @@ class ArrowGenerator:
             head_res_id = shaft_res_id + 20
             
             script_lines.extend([
-                f"# Arrow {i+1}: Domain {domain['domain_id']} (moving) -> Domain {self.fixed_domain_id} (fixed)",
-                f"# Shaft color: {moving_color} (moving domain), Head color: {fixed_color} (fixed domain)",
+                f"# Arrow {i+1}: Domain {domain['domain_id']} (moving) relative to Domain {self.fixed_domain_id} (fixed)",
+                f"# Shaft color: {shaft_color} (fixed domain), Head color: {head_color} (moving domain)",
                 f"# Rotation: {domain.get('rotation_angle', 'unknown'):.1f}°, Translation: {domain.get('translation', 'unknown'):.1f}Å",
                 f"",
                 f"# Select shaft and head atoms by chain and residue",
                 f"select shaft_{i+1}, chain {chain_id} and resn SHF and resi {shaft_res_id}",
                 f"select head_{i+1}, chain {chain_id} and resn ARH and resi {head_res_id}",
                 f"",
-                f"# Display shaft as thick licorice stick (MOVING domain color: {moving_color})",
+                f"# Display shaft as thick licorice stick (FIXED domain color: {shaft_color})",
                 f"show sticks, shaft_{i+1}",
-                f"color {moving_color}, shaft_{i+1}",
+                f"color {shaft_color}, shaft_{i+1}",
                 f"set stick_radius, 0.3, shaft_{i+1}",  # Thicker for licorice style
                 f"",
-                f"# Display arrow head as clean cone (FIXED domain color: {fixed_color})",
+                f"# Display arrow head as clean cone (MOVING domain color: {head_color})",
                 f"show sticks, head_{i+1}",
-                f"color {fixed_color}, head_{i+1}",
+                f"color {head_color}, head_{i+1}",
                 f"set stick_radius, 0.25, head_{i+1}",
                 f"",
                 f"# Connect atoms ONLY within each section",
@@ -417,12 +414,12 @@ class ArrowGenerator:
             domain_id = domain['domain_id']
             fixed_id = self.fixed_domain_id
             
-            # Apply same direct mapping as above
-            moving_color = domain_colors[domain_id % len(domain_colors)]
-            fixed_color = domain_colors[fixed_id % len(domain_colors)]
+            # Apply same corrected mapping as above
+            shaft_color = domain_colors[fixed_id % len(domain_colors)]   # shaft = fixed domain color
+            head_color = domain_colors[domain_id % len(domain_colors)]   # head = moving domain color
                 
             chain_id = chr(ord('A') + i)
-            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {fixed_color} shaft with {moving_color} head, {domain.get('rotation_angle', 0):.1f}° rotation'")
+            script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {shaft_color} shaft (fixed) with {head_color} head (moving), {domain.get('rotation_angle', 0):.1f}° rotation'")
         
         # Write script
         with open(pymol_filename, 'w') as f:
