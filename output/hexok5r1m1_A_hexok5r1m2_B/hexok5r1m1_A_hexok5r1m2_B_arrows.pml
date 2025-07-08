@@ -1,21 +1,21 @@
 # DynDom Arrow Visualization Script
 # Load main protein structure
-load output\1adg_A_2ohx_B\1adg_A_2ohx_B.pdb
+load output\hexok5r1m1_A_hexok5r1m2_B\hexok5r1m1_A_hexok5r1m2_B.pdb
 
 # Load arrows
-load 1adg_A_2ohx_B_arrows.pdb
+load hexok5r1m1_A_hexok5r1m2_B_arrows.pdb
 
 # Basic protein display
-hide everything, output\1adg_A_2ohx_B\1adg_A_2ohx_B
-show cartoon, output\1adg_A_2ohx_B\1adg_A_2ohx_B
-color gray80, output\1adg_A_2ohx_B\1adg_A_2ohx_B
+hide everything, output\hexok5r1m1_A_hexok5r1m2_B\hexok5r1m1_A_hexok5r1m2_B
+show cartoon, output\hexok5r1m1_A_hexok5r1m2_B\hexok5r1m1_A_hexok5r1m2_B
+color gray80, output\hexok5r1m1_A_hexok5r1m2_B\hexok5r1m1_A_hexok5r1m2_B
 
 # Hide arrow atoms initially
-hide everything, 1adg_A_2ohx_B_arrows
+hide everything, hexok5r1m1_A_hexok5r1m2_B_arrows
 
 # Arrow 1: Domain 1 (moving) relative to Domain 0 (fixed)
 # Shaft color: blue (fixed domain), Head color: red (moving domain)
-# Rotation: 10.0°, Translation: -0.3Å
+# Rotation: 11.6°, Translation: 0.0Å
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
@@ -34,6 +34,28 @@ set stick_radius, 0.25, head_1
 # Connect atoms ONLY within each section
 bond shaft_1, shaft_1
 bond head_1, head_1
+
+# Arrow 2: Domain 2 (moving) relative to Domain 0 (fixed)
+# Shaft color: blue (fixed domain), Head color: yellow (moving domain)
+# Rotation: 8.1°, Translation: 0.4Å
+
+# Select shaft and head atoms by chain and residue
+select shaft_2, chain B and resn SHF and resi 150
+select head_2, chain B and resn ARH and resi 170
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_2
+color blue, shaft_2
+set stick_radius, 0.3, shaft_2
+
+# Display arrow head as clean cone (MOVING domain color: yellow)
+show sticks, head_2
+color yellow, head_2
+set stick_radius, 0.25, head_2
+
+# Connect atoms ONLY within each section
+bond shaft_2, shaft_2
+bond head_2, head_2
 
 # Disable automatic bonding between different chains
 set auto_bond, 0
@@ -66,4 +88,5 @@ delete head_*
 
 print 'DynDom arrows with 3D heads loaded successfully!'
 print 'Fixed domain: 0 (blue)'
-print 'Moving domain 1: Chain A, blue shaft (fixed) with red head (moving), 10.0° rotation'
+print 'Moving domain 1: Chain A, blue shaft (fixed) with red head (moving), 11.6° rotation'
+print 'Moving domain 2: Chain B, blue shaft (fixed) with yellow head (moving), 8.1° rotation'

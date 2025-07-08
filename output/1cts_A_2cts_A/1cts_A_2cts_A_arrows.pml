@@ -13,20 +13,20 @@ color gray80, output\1cts_A_2cts_A\1cts_A_2cts_A
 # Hide arrow atoms initially
 hide everything, 1cts_A_2cts_A_arrows
 
-# Arrow 1: Domain 0 (moving) -> Domain 1 (fixed)
-# Shaft color: blue (moving domain), Head color: red (fixed domain)
+# Arrow 1: Domain 0 (moving) relative to Domain 1 (fixed)
+# Shaft color: blue (fixed domain), Head color: red (moving domain)
 # Rotation: 19.1°, Translation: -0.0Å
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
 select head_1, chain A and resn ARH and resi 120
 
-# Display shaft as thick licorice stick (MOVING domain color: blue)
+# Display shaft as thick licorice stick (FIXED domain color: blue)
 show sticks, shaft_1
 color blue, shaft_1
 set stick_radius, 0.3, shaft_1
 
-# Display arrow head as clean cone (FIXED domain color: red)
+# Display arrow head as clean cone (MOVING domain color: red)
 show sticks, head_1
 color red, head_1
 set stick_radius, 0.25, head_1
@@ -66,4 +66,4 @@ delete head_*
 
 print 'DynDom arrows with 3D heads loaded successfully!'
 print 'Fixed domain: 1 (red)'
-print 'Moving domain 0: Chain A, red shaft with blue head, 19.1° rotation'
+print 'Moving domain 0: Chain A, red shaft (fixed) with blue head (moving), 19.1° rotation'

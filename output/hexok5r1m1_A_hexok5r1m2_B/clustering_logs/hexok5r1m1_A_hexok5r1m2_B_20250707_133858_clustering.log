@@ -1,0 +1,32 @@
+DynDom Clustering Log - hexok5r1m1_A_hexok5r1m2_B
+Started: 2025-07-07 13:38:58
+============================================================
+
+Window 5, K=2 - 13:39:02
+  Clusters: 2 (sizes: [131, 322])
+  Min cluster size: 131
+  FAIL: Ratio check failed (avg: 0.000)
+  Reason: Ratio validation failed (min: 0.000, threshold: 1.0)
+
+Window 5, K=3 - 13:39:08
+  Clusters: 3 (sizes: [264, 112, 77])
+  Min cluster size: 77
+  PASS: All checks passed (avg ratio: 1.381)
+  Domains: 3 (sizes: [314, 100, 53])
+  Reason: All criteria met (avg ratio: 1.381, domains: 3)
+
+Window 5, K=4 - 13:39:13
+  Clusters: 4 (sizes: [205, 78, 132, 38])
+  Min cluster size: 38
+  FAIL: Domain building failed
+  Reason: Domain building failed but previous valid solution exists
+
+============================================================
+FINAL RESULT
+Time: 2025-07-07 13:39:13
+Final K: 3
+Final window: 5
+Status: 0
+Number of domains: 3
+Domain sizes: [314, 100, 53]
+============================================================
