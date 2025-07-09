@@ -689,7 +689,7 @@ class Engine:
             unit_rotational_part = rotational_part/rotation_amplitude
 
             # Calculate vector in direction from atoms to axis
-            cross_prod_axis = np.cross(unit_rot_vec, unit_rotational_part)
+            cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec) #SWAPPED was previously unit_rot_vec, unit_rotational_part
             h_tan = 2*math.tan(0.5*rot_angle)
             atoms_to_axis_direction = (rotation_amplitude*cross_prod_axis)/h_tan
 
