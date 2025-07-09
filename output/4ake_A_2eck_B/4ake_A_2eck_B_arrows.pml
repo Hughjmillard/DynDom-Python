@@ -14,21 +14,21 @@ color gray80, output\4ake_A_2eck_B\4ake_A_2eck_B
 hide everything, 4ake_A_2eck_B_arrows
 
 # Arrow 1: Domain 0 (moving) relative to Domain 2 (fixed)
-# Shaft color: yellow (fixed domain), Head color: blue (moving domain)
+# Shaft color: blue (fixed domain), Head color: red (moving domain)
 # Rotation: 53.0°, Translation: 1.2Å
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
 select head_1, chain A and resn ARH and resi 120
 
-# Display shaft as thick licorice stick (FIXED domain color: yellow)
+# Display shaft as thick licorice stick (FIXED domain color: blue)
 show sticks, shaft_1
-color yellow, shaft_1
+color blue, shaft_1
 set stick_radius, 0.3, shaft_1
 
-# Display arrow head as clean cone (MOVING domain color: blue)
+# Display arrow head as clean cone (MOVING domain color: red)
 show sticks, head_1
-color blue, head_1
+color red, head_1
 set stick_radius, 0.25, head_1
 
 # Connect atoms ONLY within each section
@@ -36,21 +36,21 @@ bond shaft_1, shaft_1
 bond head_1, head_1
 
 # Arrow 2: Domain 1 (moving) relative to Domain 2 (fixed)
-# Shaft color: yellow (fixed domain), Head color: red (moving domain)
+# Shaft color: blue (fixed domain), Head color: yellow (moving domain)
 # Rotation: 46.1°, Translation: 1.4Å
 
 # Select shaft and head atoms by chain and residue
 select shaft_2, chain B and resn SHF and resi 150
 select head_2, chain B and resn ARH and resi 170
 
-# Display shaft as thick licorice stick (FIXED domain color: yellow)
+# Display shaft as thick licorice stick (FIXED domain color: blue)
 show sticks, shaft_2
-color yellow, shaft_2
+color blue, shaft_2
 set stick_radius, 0.3, shaft_2
 
-# Display arrow head as clean cone (MOVING domain color: red)
+# Display arrow head as clean cone (MOVING domain color: yellow)
 show sticks, head_2
-color red, head_2
+color yellow, head_2
 set stick_radius, 0.25, head_2
 
 # Connect atoms ONLY within each section

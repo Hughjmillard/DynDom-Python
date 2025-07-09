@@ -11,6 +11,43 @@ from scipy.spatial.transform import Rotation
 from arrow_visualization import ArrowGenerator
 from clustering_logger import ClusteringLogger
 
+
+def log_protein_position(protein_name, protein_or_chain, description):
+        """
+        Log the position of a protein by printing a few key CA atom coordinates
+        """
+        
+        try:
+            # Handle both Protein objects and Chain objects
+            if hasattr(protein_or_chain, 'get_polymer'):
+                polymer = protein_or_chain.get_polymer()
+            else:
+                polymer = protein_or_chain.get_polymer()
+            
+            print(f"\n=== {protein_name} - {description} ===")
+            
+            # Print first 3 CA atoms for position reference
+            count = 0
+            for residue in polymer:
+                if count >= 3:
+                    break
+                if 'CA' in residue:
+                    ca_pos = residue['CA'][0].pos
+                    print(f"  Residue {residue.seqid.num} CA: ({ca_pos.x:.3f}, {ca_pos.y:.3f}, {ca_pos.z:.3f})")
+                    count += 1
+            
+            # Print last CA atom for additional reference
+            last_residue = None
+            for residue in polymer:
+                if 'CA' in residue:
+                    last_residue = residue
+            
+            if last_residue:
+                ca_pos = last_residue['CA'][0].pos
+                print(f"  Residue {last_residue.seqid.num} CA: ({ca_pos.x:.3f}, {ca_pos.y:.3f}, {ca_pos.z:.3f})")
+            
+        except Exception as e:
+            print(f"Error logging {protein_name}: {e}")
 class Engine:
     def __init__(self, input_path, output_path, pdb_1, chain_1, pdb_2, chain_2, k_means_n_init=1, k_means_max_iter=500,
                  window=5, domain=20, ratio=1.0, atoms="backbone"):
@@ -127,9 +164,126 @@ class Engine:
                                             self.clusterer.fixed_domain, self.bending_residues_indices, self.window)
             FileMngr.write_w5_info_file(self.output_path, self.protein_1.name, self.protein_1.chain_param,
                                         self.protein_2.name, self.protein_2.chain_param, self.window, self.domain,
-                                        self.ratio, self.atoms_to_use, self.clusterer.domains, self.clusterer.fixed_domain)
+                                        self.ratio, self.atoms_to_use, self.clusterer.domains, self.clusterer.fixed_domain,
+                                        self.protein_1)
+            self.debug_final_coordinates()
             running = False
         return True
+        
+    def debug_final_coordinates(self):
+        """
+        Print the actual coordinates being written to final PDB
+        """
+        print("\n=== FINAL PDB COORDINATES DEBUG ===")
+        
+        # Check what write_final_output_pdb actually uses
+        protein_1_coords = self.protein_1.get_polymer()[0]['CA'][0].pos
+        fitted_protein_2_coords = self.fitted_protein_2.get_polymer()[0]['CA'][0].pos
+        
+        print(f"Protein 1 (should be original): {protein_1_coords}")
+        print(f"Fitted Protein 2 (should be transformed): {fitted_protein_2_coords}")
+        
+        # Also check a few more atoms for comparison
+        print("\nFirst 3 CA atoms comparison:")
+        for i in range(3):
+            p1_ca = self.protein_1.get_polymer()[i]['CA'][0].pos
+            p2_ca = self.fitted_protein_2.get_polymer()[i]['CA'][0].pos
+            distance = ((p1_ca.x - p2_ca.x)**2 + (p1_ca.y - p2_ca.y)**2 + (p1_ca.z - p2_ca.z)**2)**0.5
+            print(f"  Residue {i}: P1={p1_ca} | P2={p2_ca} | Distance={distance:.3f}Å")
+        
+        print(f"\nExpected: Protein 1 unchanged from original, Protein 2 transformed")
+        print("If distances are very large (>50Å), coordinates are in different spaces")
+        print("If distances are small (<5Å), fixed domain should be well aligned")
+        print(f"\nFixed Domain ID: {self.clusterer.fixed_domain}")
+
+        print(f"Fixed Domain Segments: {self.clusterer.domains[self.clusterer.fixed_domain].segments}")
+        
+        # CHECK: Are we looking at atoms from the fixed domain?
+        print(f"Fixed domain ID from clusterer: {self.clusterer.fixed_domain}")
+        fixed_domain = self.clusterer.domains[self.clusterer.fixed_domain]
+        print(f"Fixed domain segments: {fixed_domain.segments}")
+        print(f"\nDEBUG: Are residues 0-2 in the fixed domain?")
+        for seg in fixed_domain.segments:
+            if 0 >= seg[0] and 2 <= seg[1]:
+                print(f"Residues 0-2 ARE in fixed domain segment {seg}")
+                break
+        else:
+            print(f"Residues 0-2 are NOT in the fixed domain!")
+
+    def log_fixed_domain_coordinates(self, description="Unnamed test"):
+        """
+        Print coordinates of the fixed domain from both proteins for comparison
+        """
+        try:
+            fixed_domain_id = self.clusterer.fixed_domain
+            fixed_domain = self.clusterer.domains[fixed_domain_id]
+            
+            print(f"\n=== Fixed Domain Coordinates - {description} ===")
+            print(f"Fixed Domain ID: {fixed_domain_id}")
+            print(f"Fixed Domain Segments: {fixed_domain.segments}")
+            
+            # Get slide window residues - FIXED: Handle different object types
+            protein_1_slide = self.protein_1.get_slide_window_residues()
+            
+            # For fitted_protein_2, we need to manually extract the slide window equivalent
+            # Since it's a Chain object, we need to get the polymer and extract the right residues
+            fitted_protein_2_polymer = self.fitted_protein_2.get_polymer()
+            protein_1_indices = self.protein_1.slide_window_residues_indices
+            protein_1_util_indices = self.protein_1.utilised_residues_indices
+            
+            print("\nFirst 5 CA atoms from fixed domain:")
+            print("Residue | Protein 1 CA Position        | Protein 2 CA Position        | Distance")
+            print("--------|-------------------------------|-------------------------------|----------")
+            
+            count = 0
+            for s in fixed_domain.segments:
+                for i in range(s[0], s[1] + 1):
+                    if count >= 5:  # Only show first 5 for readability
+                        break
+                        
+                    # Get protein 1 CA
+                    if 'CA' in protein_1_slide[i]:
+                        ca1 = protein_1_slide[i]['CA'][0].pos
+                        
+                        # Get corresponding protein 2 CA - FIXED: Use utilised_residues_indices
+                        slide_window_start = protein_1_indices[0]
+                        actual_residue_index = protein_1_util_indices[slide_window_start + i]
+                        
+                        if 'CA' in fitted_protein_2_polymer[actual_residue_index]:
+                            ca2 = fitted_protein_2_polymer[actual_residue_index]['CA'][0].pos
+                            
+                            # Calculate distance between corresponding atoms
+                            distance = ((ca1.x - ca2.x)**2 + (ca1.y - ca2.y)**2 + (ca1.z - ca2.z)**2)**0.5
+                            
+                            print(f"  {i:3d}   | ({ca1.x:6.3f}, {ca1.y:6.3f}, {ca1.z:6.3f}) | ({ca2.x:6.3f}, {ca2.y:6.3f}, {ca2.z:6.3f}) | {distance:6.3f}Å")
+                            count += 1
+                
+                if count >= 5:
+                    break
+            
+            # Calculate average distance for all fixed domain CA atoms
+            total_distance = 0
+            total_count = 0
+            for s in fixed_domain.segments:
+                for i in range(s[0], s[1] + 1):
+                    if 'CA' in protein_1_slide[i]:
+                        ca1 = protein_1_slide[i]['CA'][0].pos
+                        
+                        slide_window_start = protein_1_indices[0]
+                        actual_residue_index = protein_1_util_indices[slide_window_start + i]
+                        
+                        if 'CA' in fitted_protein_2_polymer[actual_residue_index]:
+                            ca2 = fitted_protein_2_polymer[actual_residue_index]['CA'][0].pos
+                            distance = ((ca1.x - ca2.x)**2 + (ca1.y - ca2.y)**2 + (ca1.z - ca2.z)**2)**0.5
+                            total_distance += distance
+                            total_count += 1
+            
+            if total_count > 0:
+                avg_distance = total_distance / total_count
+                print(f"\nAverage CA distance across entire fixed domain: {avg_distance:.3f}Å")
+            
+        except Exception as e:
+            print(f"Error logging fixed domain coordinates: {e}")
 
     def check_sequence_identity(self, res_names_1, res_names_2):
         """
@@ -244,6 +398,8 @@ class Engine:
         Superimposes the entire chain of Protein 2 onto Protein 1 using the backbone atoms to get Protein 2 in the same
         coordinate space of Protein 1. Saves the Protein 2 chain after transformation into fitting_protein_2.
         """
+        log_protein_position("Protein 1", self.protein_1, "Original position (never changes)")
+        log_protein_position("Protein 2", self.protein_2, "Original position (before whole-protein fit)")
         self.fitted_protein_2 = self.protein_2.get_chain()
         fitted_protein_polymer = self.fitted_protein_2.get_polymer()
         ptype = fitted_protein_polymer.check_polymer_type()
@@ -252,7 +408,8 @@ class Engine:
                                                                                        fitted_protein_polymer,
                                                                                        ptype, gemmi.SupSelect.MainChain)
         fitted_protein_polymer.transform_pos_and_adp(self.chain_superimpose_result.transform)
-        # P
+        log_protein_position("Fitted Protein 2", self.fitted_protein_2, "After whole-protein transformation")
+        # Print RMSD
         print(f'rmsd of whole protein best fit: {self.chain_superimpose_result.rmsd:.3f}A')
 
     def sliding_window_superimpose_residues(self):
@@ -321,11 +478,41 @@ class Engine:
         Calculates the screw axis of the dynamic domains.
         :return:
         """
+        print(f"\n=== BEFORE SCREW AXIS CALCULATION ===")
+        print(f"self.clusterer.fixed_domain = {self.clusterer.fixed_domain}")
+        print(f"Fixed domain size: {self.clusterer.domains[self.clusterer.fixed_domain].num_residues}")
+        print(f"Fixed domain segments: {self.clusterer.domains[self.clusterer.fixed_domain].segments}")
+        """ FOLLOWING CODE REMOVED FOR TESTING PURPOSES, REPLACED BELOW
         # Get the transformations of the fixed domain of Protein 2 fitting to fixed domain of Protein 1
         fixed_domain_r: gemmi.SupResult = self.get_fixed_domain_transformations()
+        # Apply the fixed domain transformation to the fitted Protein 2 to save GLOBALLY
+        self.fitted_protein_2.get_polymer().transform_pos_and_adp(fixed_domain_r.transform)
+
         # Get the slide chain of Protein 1
         original_protein_1_slide_chain: gemmi.ResidueSpan = self.protein_1.get_slide_window_residues()
         # Get the slide chain of Protein 2 and fit to Protein 1 relative to the fixed domain.
+        transformed_protein_2_slide_chain: gemmi.ResidueSpan = self.protein_2.get_slide_window_residues()
+        transformed_protein_2_slide_chain.transform_pos_and_adp(fixed_domain_r.transform)
+        """
+        log_protein_position("Fitted Protein 2", self.fitted_protein_2, "Before fixed-domain transformation")
+
+        # Get the transformations of the fixed domain of Protein 2 fitting to fixed domain of Protein 1
+        fixed_domain_r: gemmi.SupResult = self.get_fixed_domain_transformations()
+
+        print(f"\n=== Fixed Domain Transformation ===")
+        print(f"  RMSD: {fixed_domain_r.rmsd:.3f}A")
+        print(f"  Translation: ({fixed_domain_r.transform.vec.x:.3f}, {fixed_domain_r.transform.vec.y:.3f}, {fixed_domain_r.transform.vec.z:.3f})")
+        self.fitted_protein_2 = self.protein_2.get_chain()
+        # Apply the fixed domain transformation to the fitted Protein 2 to save GLOBALLY for final output
+        self.fitted_protein_2.get_polymer().transform_pos_and_adp(fixed_domain_r.transform)
+
+        log_protein_position("Fitted Protein 2", self.fitted_protein_2, "After fixed-domain transformation")
+
+        self.log_fixed_domain_coordinates("After fixed-domain transformation")
+
+        # Get the slide chain of Protein 1 (remains in original position as reference)
+        original_protein_1_slide_chain: gemmi.ResidueSpan = self.protein_1.get_slide_window_residues()
+        # Get the slide chain of Protein 2 from original coordinates, then apply transformation
         transformed_protein_2_slide_chain: gemmi.ResidueSpan = self.protein_2.get_slide_window_residues()
         transformed_protein_2_slide_chain.transform_pos_and_adp(fixed_domain_r.transform)
 
@@ -364,13 +551,66 @@ class Engine:
             transformed_protein_1_domain_polymer: gemmi.ResidueSpan = transformed_protein_1_domain_chain.get_polymer()
             transformed_protein_2_domain_polymer: gemmi.ResidueSpan = transformed_protein_2_domain_chain.get_polymer()
             ptype = transformed_protein_1_domain_polymer.check_polymer_type()
+
+            # === DEBUGGING: Print superposition info ===
+            print(f"\n=== DOMAIN {domain.domain_id} SUPERPOSITION DEBUG ===")
+            
+            # Save original coordinates BEFORE transformation - CRITICAL FIX
+            original_coords_backup = []
+            num_atoms_to_use = 4
+            for i in range(num_atoms_to_use):
+                original_coords_backup.append(np.array([
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.x,
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.y,
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.z
+                ]))
+            
+            # Print coordinates BEFORE transformation
+            if len(transformed_protein_1_domain_polymer) > 0:
+                ca_before = transformed_protein_1_domain_polymer[0]['CA'][0].pos
+                print(f"P1 moving domain CA[0] BEFORE: ({ca_before.x:.6f}, {ca_before.y:.6f}, {ca_before.z:.6f})")
+
             # Fit Protein 1 dynamic domain onto Transformed Protein 2 dynamic domain
             r: gemmi.SupResult = gemmi.calculate_superposition(transformed_protein_2_domain_polymer,
-                                                               transformed_protein_1_domain_polymer,
-                                                               ptype, gemmi.SupSelect.MainChain)
+                                                                transformed_protein_1_domain_polymer, 
+                                                                ptype, gemmi.SupSelect.MainChain)
             domain.rmsd = r.rmsd
+            
+            # === DEBUGGING: Print superposition results ===
+            print(f"Superposition RMSD: {r.rmsd:.6f}A")
+            print(f"Rotation matrix determinant: {np.linalg.det(np.asarray(r.transform.mat.tolist())):.6f}")
+            print(f"Translation vector: ({r.transform.vec.x:.6f}, {r.transform.vec.y:.6f}, {r.transform.vec.z:.6f})")
+            
             # Transform the domain chain
             transformed_protein_1_domain_polymer.transform_pos_and_adp(r.transform)
+            
+            # === DEBUGGING: Print coordinates AFTER transformation ===
+            # === DEBUGGING: Print detailed atom-by-atom comparison ===
+            print(f"\n--- DETAILED ATOM-BY-ATOM COMPARISON ---")
+            for i in range(min(100, len(transformed_protein_1_domain_polymer))):
+                if len(transformed_protein_2_domain_polymer) > i:
+                    ca_p1_after = transformed_protein_1_domain_polymer[i]['CA'][0].pos
+                    ca_p2_target = transformed_protein_2_domain_polymer[i]['CA'][0].pos
+                    
+                    # Calculate distance
+                    target_diff = np.array([ca_p1_after.x - ca_p2_target.x, ca_p1_after.y - ca_p2_target.y, ca_p1_after.z - ca_p2_target.z])
+                    target_distance = np.linalg.norm(target_diff)
+                    
+                    # Get residue info for context
+                    res_p1 = transformed_protein_1_domain_polymer[i]
+                    res_p2 = transformed_protein_2_domain_polymer[i]
+                    
+                    print(f"Atom {i:2d} ({res_p1.name}{res_p1.seqid.num}): P1=({ca_p1_after.x:7.3f},{ca_p1_after.y:7.3f},{ca_p1_after.z:7.3f}) P2=({ca_p2_target.x:7.3f},{ca_p2_target.y:7.3f},{ca_p2_target.z:7.3f}) dist={target_distance:.3f}Å")
+
+            # Test: manually check if superposition worked
+            print("=== SUPERPOSITION VERIFICATION ===")
+            for i in range(min(10, len(transformed_protein_1_domain_polymer))):
+                p1_pos = transformed_protein_1_domain_polymer[i]['CA'][0].pos
+                p2_pos = transformed_protein_2_domain_polymer[i]['CA'][0].pos
+                distance = np.sqrt((p1_pos.x - p2_pos.x)**2 + (p1_pos.y - p2_pos.y)**2 + (p1_pos.z - p2_pos.z)**2)
+                print(f"Residue {i}: P1=({p1_pos.x:.3f},{p1_pos.y:.3f},{p1_pos.z:.3f}) P2=({p2_pos.x:.3f},{p2_pos.y:.3f},{p2_pos.z:.3f}) dist={distance:.3f}")
+
+            
             # print(f"Ori after : {original_protein_1_slide_chain[4].sole_atom('CA').pos}")
             # print(f"Trans after : {transformed_protein_1_domain_chain[4].sole_atom('CA').pos}")
             # Get the rotation matrix of the domain transformation and convert to rotation vector
@@ -383,13 +623,58 @@ class Engine:
             Assuming the dynamic domains move as a rigid body, the translations for all atoms would be the same. No need
             to use all residues. Just 4 atoms/residues is fine. Either backbone atoms from 4 residues or just 4 atoms.
             """
-            original_atom_coords = np.asarray(original_protein_1_domain_chain[0][self.atoms_to_use[0]][0].pos.tolist())
-            transformed_atom_coords = np.asarray(transformed_protein_1_domain_chain[0][self.atoms_to_use[0]][0].pos.tolist())
-            for i in range(1, 4):
-                original_atom_coords = np.vstack((original_atom_coords, np.asarray(original_protein_1_domain_chain[i][self.atoms_to_use[0]][0].pos.tolist())))
-                transformed_atom_coords = np.vstack((transformed_atom_coords, np.asarray(transformed_protein_1_domain_chain[i][self.atoms_to_use[0]][0].pos.tolist())))
-            original_atom_coords = np.mean(original_atom_coords, axis=0)
-            transformed_atom_coords = np.mean(transformed_atom_coords, axis=0)
+            
+            # === CRITICAL FIX: Get transformed coordinates AFTER transformation ===
+            transformed_coords = []
+            for i in range(num_atoms_to_use):
+                transformed_coords.append(np.array([
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.x,
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.y,
+                    transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.z
+                ]))
+            print("=== RIGIDITY TEST ===")
+            # Distance between first two atoms before transformation
+            if len(original_coords_backup) > 8 and len(transformed_coords) > 8:
+                pos0_before = np.array(original_coords_backup[0])  # Segment 1
+                pos8_before = np.array(original_coords_backup[8])  # Segment 2
+                dist_cross_before = np.linalg.norm(pos8_before - pos0_before)
+
+                pos0_after = transformed_coords[0]  # Segment 1
+                pos8_after = transformed_coords[8]  # Segment 2  
+                dist_cross_after = np.linalg.norm(pos8_after - pos0_after)
+
+                print(f"Distance atom0-atom8 before: {dist_cross_before:.6f}")
+                print(f"Distance atom0-atom8 after:  {dist_cross_after:.6f}")
+                print(f"Cross-segment difference: {abs(dist_cross_after - dist_cross_before):.6f} (should be ~0)")
+            else:
+                print("Not enough atoms for cross-segment test")
+
+            print("=== DOMAIN COMPOSITION DEBUG ===")
+            print(f"P1 domain length: {len(transformed_protein_1_domain_polymer)} residues")
+            print(f"P2 domain length: {len(transformed_protein_2_domain_polymer)} residues")
+            print(f"Domain segments: {domain.segments}")
+
+            print("P1 domain residue sequence:")
+            for i in range(min(10, len(transformed_protein_1_domain_polymer))):
+                res = transformed_protein_1_domain_polymer[i]
+                print(f"  Residue {i}: {res.name} {res.seqid.num}")
+                
+            print("P2 domain residue sequence:")
+            for i in range(min(10, len(transformed_protein_2_domain_polymer))):
+                res = transformed_protein_2_domain_polymer[i]
+                print(f"  Residue {i}: {res.name} {res.seqid.num}")
+
+            # Calculate displacement using saved coordinates - FIXED CALCULATION
+            original_atom_coords = np.mean(original_coords_backup, axis=0)
+            transformed_atom_coords = np.mean(transformed_coords, axis=0)
+
+            # === DEBUGGING: Print displacement calculation ===
+            actual_displacement = transformed_atom_coords - original_atom_coords
+            print(f"--- FIXED DISPLACEMENT CALCULATION ---")
+            print(f"Original centroid: ({original_atom_coords[0]:.6f}, {original_atom_coords[1]:.6f}, {original_atom_coords[2]:.6f})")
+            print(f"Transformed centroid: ({transformed_atom_coords[0]:.6f}, {transformed_atom_coords[1]:.6f}, {transformed_atom_coords[2]:.6f})")
+            print(f"Actual displacement: ({actual_displacement[0]:.6f}, {actual_displacement[1]:.6f}, {actual_displacement[2]:.6f})")
+            print(f"Displacement magnitude: {np.linalg.norm(actual_displacement):.6f}A")
 
             # Calculate the displacement vector
             disp_vec = transformed_atom_coords - original_atom_coords
@@ -404,11 +689,18 @@ class Engine:
             unit_rotational_part = rotational_part/rotation_amplitude
 
             # Calculate vector in direction from atoms to axis
-            cross_prod_axis = np.cross(unit_rot_vec, unit_rotational_part)
+            cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec) #SWAPPED was previously unit_rot_vec, unit_rotational_part
             h_tan = 2*math.tan(0.5*rot_angle)
             atoms_to_axis_direction = (rotation_amplitude*cross_prod_axis)/h_tan
 
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
+            
+            # === DEBUGGING: Print final results ===
+            print(f"Final point on axis: ({point_on_axis[0]:.6f}, {point_on_axis[1]:.6f}, {point_on_axis[2]:.6f})")
+            print(f"Screw axis direction: ({unit_rot_vec[0]:.6f}, {unit_rot_vec[1]:.6f}, {unit_rot_vec[2]:.6f})")
+            print(f"Rotation angle: {rot_angle:.6f} degrees")
+            print(f"Translation along axis: {translation_component_value:.6f}A")
+            
             domain.rot_angle = rot_angle
             domain.disp_vec = disp_vec
             domain.point_on_axis = point_on_axis
@@ -416,8 +708,63 @@ class Engine:
             domain.translation = translation_component_value
             domain_screw_axes.append((unit_rot_vec, rot_angle, point_on_axis))
 
-        return domain_screw_axes
+            print("=== SAVING DOMAIN COMPARISON PDB ===")
 
+            # Create output filename
+            domain_comparison_filename = f"domain_{domain.domain_id}_comparison.pdb"
+            domain_comparison_path = os.path.join(self.output_path, 
+                f"{self.protein_1.name}_{self.protein_1.chain_param}_{self.protein_2.name}_{self.protein_2.chain_param}",
+                domain_comparison_filename)
+
+            try:
+                with open(domain_comparison_path, 'w') as f:
+                    # Write header
+                    f.write("REMARK Domain Motion Comparison\n")
+                    f.write("REMARK Model 1: P1 Moving Domain (Original Position)\n") 
+                    f.write("REMARK Model 2: P1 Moving Domain (Transformed Position)\n")
+                    f.write("REMARK Model 3: P2 Moving Domain (Target Position)\n")
+                    
+                    # MODEL 1: Original P1 domain position
+                    f.write("MODEL        1\n")
+                    atom_id = 1
+                    for i, residue in enumerate(original_protein_1_domain_chain.get_polymer()):
+                        for atom in residue:
+                            f.write(f"ATOM  {atom_id:5d} {atom.name:>4s} {residue.name:>3s} A{residue.seqid.num:4d}    "
+                                f"{atom.pos.x:8.3f}{atom.pos.y:8.3f}{atom.pos.z:8.3f}  1.00 50.00           {atom.element.name}\n")
+                            atom_id += 1
+                    f.write("ENDMDL\n")
+                    
+                    # MODEL 2: Transformed P1 domain position  
+                    f.write("MODEL        2\n")
+                    atom_id = 1
+                    for i, residue in enumerate(transformed_protein_1_domain_polymer):
+                        for atom in residue:
+                            f.write(f"ATOM  {atom_id:5d} {atom.name:>4s} {residue.name:>3s} B{residue.seqid.num:4d}    "
+                                f"{atom.pos.x:8.3f}{atom.pos.y:8.3f}{atom.pos.z:8.3f}  1.00 50.00           {atom.element.name}\n")
+                            atom_id += 1
+                    f.write("ENDMDL\n")
+                    
+                    # MODEL 3: P2 domain target position
+                    f.write("MODEL        3\n") 
+                    atom_id = 1
+                    for i, residue in enumerate(transformed_protein_2_domain_polymer):
+                        for atom in residue:
+                            f.write(f"ATOM  {atom_id:5d} {atom.name:>4s} {residue.name:>3s} C{residue.seqid.num:4d}    "
+                                f"{atom.pos.x:8.3f}{atom.pos.y:8.3f}{atom.pos.z:8.3f}  1.00 50.00           {atom.element.name}\n")
+                            atom_id += 1
+                    f.write("ENDMDL\n")
+                    
+                    f.write("END\n")
+                
+                print(f"Domain comparison saved to: {domain_comparison_path}")
+                
+            except Exception as e:
+                print(f"Error saving domain comparison: {e}")
+
+            
+
+        return domain_screw_axes
+    
     def determine_bending_residues(self):
         """
         Determine the bending residues between each fixed-dynamic domain pair.
@@ -590,18 +937,26 @@ class Engine:
         Get the transformation of the fixed domain of protein 2 to protein 1
         :return:
         """
+        print(f"\n=== GET_FIXED_DOMAIN_TRANSFORMATIONS DEBUG ===")
+        print(f"Using fixed_domain_id: {self.clusterer.fixed_domain}")
         slide_window_1 = self.protein_1.get_slide_window_residues()
         slide_window_2 = self.protein_2.get_slide_window_residues()
         coords_1 = []
         coords_2 = []
         fixed_domain_id = self.clusterer.fixed_domain
+
+        print(f"Fixed domain segments: {self.clusterer.domains[fixed_domain_id].segments}")
+
         for s in self.clusterer.domains[fixed_domain_id].segments:
+            print(f"Processing segment: {s[0]} to {s[1]}")
             for i in range(s[0], s[1] + 1):
                 for a in self.atoms_to_use:
                     coords_1.append(slide_window_1[i][a][0].pos)
                     coords_2.append(slide_window_2[i][a][0].pos)
 
+        print(f"Total atoms used for fixed domain transformation: {len(coords_1)}")
         r: gemmi.SupResult = gemmi.superpose_positions(coords_1, coords_2)
+        print(f"Fixed domain transformation RMSD: {r.rmsd:.3f}A")
         return r
 
     def get_arrow_coords(self):

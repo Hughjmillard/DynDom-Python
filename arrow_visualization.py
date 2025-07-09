@@ -342,8 +342,8 @@ class ArrowGenerator:
             fixed_id = self.fixed_domain_id  # fixed domain
             
             # Correct assignment: shaft = fixed, head = moving
-            shaft_color = domain_colors[fixed_id % len(domain_colors)]   # shaft = fixed domain color
-            head_color = domain_colors[domain_id % len(domain_colors)]   # head = moving domain color
+            shaft_color = domain_colors[0]  # Fixed domain always gets blue (index 0)
+            head_color = domain_colors[1 + i]  # Moving domains get red, yellow, etc. (indices 1+)
             
             # Use chain-specific selections to completely separate arrows
             chain_id = chr(ord('A') + i)

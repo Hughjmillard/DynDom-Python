@@ -278,7 +278,7 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
 
 
 def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name: str, chain_2, window, domain_size, ratio, atoms,
-                       domains: list, fixed_domain_id: int):
+                       domains: list, fixed_domain_id: int, protein_1):
     try:
         protein_folder = f"{protein_1_name}_{chain_1}_{protein_2_name}_{chain_2}"
         fw = open(f"{output_path}/{protein_folder}/{protein_folder}.w5_info", "w")
@@ -298,12 +298,29 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
         fixed_domain = domains[fixed_domain_id]
         fw.write("FIXED DOMAIN\n")
         fw.write(f"DOMAIN NUMBER: \t {fixed_domain_id} (coloured {domain_colours[0]} for rasmol)\n")
+        slide_window_indices = protein_1.slide_window_residues_indices
+        util_res = protein_1.utilised_residues_indices
+        polymer = protein_1.get_polymer()
+
         residue_str = ""
         for s in range(fixed_domain.segments.shape[0]):
+            # Convert sequence indices to PDB residue numbers
+            start_seq_idx = fixed_domain.segments[s][0]
+            end_seq_idx = fixed_domain.segments[s][1]
+            
+            start_util_pos = slide_window_indices[0] + start_seq_idx
+            end_util_pos = slide_window_indices[0] + end_seq_idx
+            
+            start_polymer_idx = util_res[start_util_pos]
+            end_polymer_idx = util_res[end_util_pos]
+            
+            start_pdb_num = polymer[start_polymer_idx].seqid.num
+            end_pdb_num = polymer[end_polymer_idx].seqid.num
+            
             if s == 0:
-                residue_str = f"{str(fixed_domain.segments[s][0])} - {str(fixed_domain.segments[s][1])}"
+                residue_str = f"{start_pdb_num} - {end_pdb_num}"
             else:
-                residue_str = residue_str + f", {str(fixed_domain.segments[s][0])} - {str(fixed_domain.segments[s][1])}"
+                residue_str = residue_str + f", {start_pdb_num} - {end_pdb_num}"
         fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
         fw.write(f"SIZE: \t{fixed_domain.num_residues}\n")
         fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(fixed_domain.rmsd, 3)}A\n")
@@ -314,12 +331,28 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 fw.write("------------------------------------------------------------------------------\n")
                 fw.write(f"MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR {domain_count}\n")
                 fw.write(f"DOMAIN NUMBER: \t {domain.domain_id} (coloured {domain_colours[domain_count]} for rasmol)\n")
+                slide_window_indices = protein_1.slide_window_residues_indices
+                util_res = protein_1.utilised_residues_indices
+                polymer = protein_1.get_polymer()
                 residue_str = ""
-                for s in range(domain.segments.shape[0]):
+                for s in range(domain.segments.shape[0]):  # CHANGED: domain.segments instead of fixed_domain.segments
+                    # Convert sequence indices to PDB residue numbers
+                    start_seq_idx = domain.segments[s][0]  # CHANGED: domain.segments
+                    end_seq_idx = domain.segments[s][1]    # CHANGED: domain.segments
+                
+                    start_util_pos = slide_window_indices[0] + start_seq_idx
+                    end_util_pos = slide_window_indices[0] + end_seq_idx
+                
+                    start_polymer_idx = util_res[start_util_pos]
+                    end_polymer_idx = util_res[end_util_pos]
+                
+                    start_pdb_num = polymer[start_polymer_idx].seqid.num
+                    end_pdb_num = polymer[end_polymer_idx].seqid.num
+                
                     if s == 0:
-                        residue_str = f"{str(domain.segments[s][0])} - {str(domain.segments[s][1])}"
+                        residue_str = f"{start_pdb_num} - {end_pdb_num}"
                     else:
-                        residue_str = residue_str + f", {str(domain.segments[s][0])} - {str(domain.segments[s][1])}"
+                        residue_str = residue_str + f", {start_pdb_num} - {end_pdb_num}"
                 fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
                 fw.write(f"SIZE: \t{domain.num_residues}\n")
                 fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(domain.rmsd, 3)}A\n")
@@ -330,7 +363,20 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 fw.write(f"POINT ON AXIS: \t{round(domain.point_on_axis[0], 3)} \t{round(domain.point_on_axis[1], 3)} \t{round(domain.point_on_axis[2], 3)}\n")
                 groups = group_continuous_regions(domain.bend_res)
                 for group in groups:
-                    fw.write(f"BENDING RESIDUES: \t{group[0]} - {group[-1]}\n")
+                    # Convert bending residue sequence indices to PDB residue numbers
+                    start_seq_idx = group[0]
+                    end_seq_idx = group[-1]
+                    
+                    start_util_pos = slide_window_indices[0] + start_seq_idx
+                    end_util_pos = slide_window_indices[0] + end_seq_idx
+                    
+                    start_polymer_idx = util_res[start_util_pos]
+                    end_polymer_idx = util_res[end_util_pos]
+                    
+                    start_pdb_num = polymer[start_polymer_idx].seqid.num
+                    end_pdb_num = polymer[end_polymer_idx].seqid.num
+                    
+                    fw.write(f"BENDING RESIDUES: \t{start_pdb_num} - {end_pdb_num}\n")
                 domain_count += 1
 
     except Exception as e:

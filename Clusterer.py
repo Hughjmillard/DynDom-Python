@@ -462,7 +462,23 @@ class Clusterer:
         """
         # If there are only 2 domains, the fixed domain is the domain with the largest number of residues
         if len(domains) <= 2:
-            chosen_domain = np.argmax([sum(d.segments[:, 1] + 1 - d.segments[:, 0]) for d in domains])
+            domain_sizes = [sum(d.segments[:, 1] + 1 - d.segments[:, 0]) for d in domains]
+            chosen_domain = np.argmax(domain_sizes)
+            
+            print(f"\n=== FIXED DOMAIN SELECTION DEBUG ===")
+            print(f"Domain 0 size: {domain_sizes[0]} residues")
+            print(f"Domain 1 size: {domain_sizes[1]} residues") 
+            print(f"np.argmax returned: {chosen_domain}")
+            print(f"Domain {chosen_domain} will be FIXED (stationary)")
+            print(f"Domain {chosen_domain} = {'Blue' if chosen_domain == 0 else 'Red'} in PyMOL")
+            print(f"Expected: Larger domain ({max(domain_sizes)} residues) should be fixed")
+            
+            # Check domain segments for debugging
+            for i, domain in enumerate(domains):
+                print(f"Domain {i} segments: {domain.segments}")
+                print(f"Domain {i} calculated size: {domain_sizes[i]}")
+                print(f"Domain {i} stored num_residues: {domain.num_residues}")
+            
             return chosen_domain
         # Get the segments from each domain
         segments = [d.segments for d in domains]
@@ -494,6 +510,7 @@ class Clusterer:
         return chosen_domain
 
     def mass_weighted_fit(self, dynamic_domain: Domain, fixed_domain: Domain):
+        print(f"Using mass weighted fit to move both domains...")
         """
         Performs a mass-weighted protein best fit on a domain pair to get a new set of coordinates of a domain pair.
         :param dynamic_domain: The domain connected to the fixed domain
@@ -537,6 +554,37 @@ class Clusterer:
         r: gemmi.SupResult = gemmi.superpose_positions(coords_1, coords_2, weights)
         slide_window_2.transform_pos_and_adp(r.transform)
         # return r_1, r_2, slide_window_1, slide_window_2
+        return r, slide_window_2
+
+    def fit_fixed_dom(self, dynamic_domain: Domain, fixed_domain: Domain):
+        print(f"Fitting fixed domain {fixed_domain.domain_id} onto dynamic domain {dynamic_domain.domain_id}...")
+        """
+        Performs a fixed-domain-only protein best fit following Fortran DynDom approach.
+        Fits conformation 2's fixed domain onto conformation 1's fixed domain, moving entire conformation 2.
+        :param dynamic_domain: The domain connected to the fixed domain (not used in fitting)
+        :param fixed_domain: The fixed domain (used as sole basis for fitting)
+        :return r: A SupResult object containing RMSD, Center 1, Center 2, Rotation Matrix, and Translation Vector
+        :return slide_window_2: The slide window residue chain of Protein 2 after fitting (transformation)
+                                to Protein 1's fixed domain position
+        """
+        slide_window_1 = self.protein_1.get_slide_window_residues()
+        slide_window_2 = self.protein_2.get_slide_window_residues()
+        # Lists to store the backbone atom coordinates of ONLY the fixed domain residues in Protein 1 and 2.
+        coords_1 = []
+        coords_2 = []
+        
+        # Extract coordinates from ONLY the fixed domain segments (dynamic domain is ignored for fitting)
+        for s in fixed_domain.segments:
+            for i in range(s[0], s[1] + 1):
+                for a in self.atoms_to_use:
+                    coords_1.append(slide_window_1[i][a][0].pos)
+                    coords_2.append(slide_window_2[i][a][0].pos)
+        
+        # The superposition result of Protein 2's fixed domain fitting onto Protein 1's fixed domain
+        # This transformation will be applied to the ENTIRE Protein 2 slide window
+        r: gemmi.SupResult = gemmi.superpose_positions(coords_1, coords_2)
+        slide_window_2.transform_pos_and_adp(r.transform)
+        
         return r, slide_window_2
 
     def check_ratios(self, transformed_protein, dynamic_domain: Domain, fixed_domain: Domain):

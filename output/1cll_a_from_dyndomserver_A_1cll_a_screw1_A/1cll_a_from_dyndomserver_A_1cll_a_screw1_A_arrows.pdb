@@ -1,0 +1,89 @@
+REMARK DynDom Arrow Visualization
+REMARK Shaft atoms = SHF residues
+REMARK Head atoms = ARH residues
+REMARK Each arrow uses separate chain ID (A, B, C...)
+REMARK Arrow length calculated from protein dimensions
+REMARK Generated from: output\1cll_a_from_dyndomserver_A_1cll_a_screw1_A\1cll_a_from_dyndomserver_A_1cll_a_screw1_A.w5_info
+REMARK Arrow 1: Domain 1 moving relative to fixed domain 0
+REMARK   Chain A: Rotation angle: 89.9 degrees
+ATOM   1000  CA  SHF A 100      10.291  -4.957 -11.767  1.00 30.00           C
+ATOM   1001  CA  SHF A 100      10.870  -4.381 -11.190  1.00 30.00           C
+ATOM   1002  CA  SHF A 100      11.449  -3.805 -10.613  1.00 30.00           C
+ATOM   1003  CA  SHF A 100      12.028  -3.229 -10.036  1.00 30.00           C
+ATOM   1004  CA  SHF A 100      12.607  -2.653  -9.459  1.00 30.00           C
+ATOM   1005  CA  SHF A 100      13.186  -2.077  -8.882  1.00 30.00           C
+ATOM   1006  CA  SHF A 100      13.765  -1.501  -8.305  1.00 30.00           C
+ATOM   1007  CA  SHF A 100      14.344  -0.925  -7.728  1.00 30.00           C
+ATOM   1008  CA  SHF A 100      14.923  -0.349  -7.151  1.00 30.00           C
+ATOM   1009  CA  SHF A 100      15.502   0.227  -6.574  1.00 30.00           C
+ATOM   1010  CA  SHF A 100      16.081   0.803  -5.997  1.00 30.00           C
+ATOM   1011  CA  SHF A 100      16.660   1.379  -5.420  1.00 30.00           C
+ATOM   1012  CA  SHF A 100      17.239   1.955  -4.843  1.00 30.00           C
+ATOM   1013  CA  SHF A 100      17.818   2.531  -4.266  1.00 30.00           C
+ATOM   1014  CA  SHF A 100      18.397   3.107  -3.689  1.00 30.00           C
+ATOM   1015  CA  SHF A 100      18.977   3.683  -3.112  1.00 30.00           C
+ATOM   1016  CA  SHF A 100      19.556   4.259  -2.535  1.00 30.00           C
+ATOM   1017  CA  SHF A 100      20.135   4.835  -1.958  1.00 30.00           C
+ATOM   1018  CA  SHF A 100      20.714   5.411  -1.381  1.00 30.00           C
+ATOM   1019  CA  SHF A 100      21.293   5.987  -0.804  1.00 30.00           C
+ATOM   1020  CA  SHF A 100      21.872   6.563  -0.227  1.00 30.00           C
+ATOM   1021  CA  SHF A 100      22.451   7.139   0.350  1.00 30.00           C
+ATOM   1022  CA  SHF A 100      23.030   7.715   0.927  1.00 30.00           C
+ATOM   1023  CA  SHF A 100      23.609   8.291   1.504  1.00 30.00           C
+ATOM   1024  CA  SHF A 100      24.188   8.867   2.082  1.00 30.00           C
+ATOM   1025  CA  SHF A 100      24.767   9.443   2.659  1.00 30.00           C
+ATOM   1026  CA  SHF A 100      25.346  10.019   3.236  1.00 30.00           C
+ATOM   1027  CA  SHF A 100      25.925  10.595   3.813  1.00 30.00           C
+ATOM   1028  CA  SHF A 100      26.504  11.171   4.390  1.00 30.00           C
+ATOM   1029  CA  SHF A 100      27.083  11.747   4.967  1.00 30.00           C
+ATOM   1030  CA  SHF A 100      27.662  12.323   5.544  1.00 30.00           C
+ATOM   1031  CA  SHF A 100      28.241  12.899   6.121  1.00 30.00           C
+ATOM   1032  CA  SHF A 100      28.820  13.475   6.698  1.00 30.00           C
+ATOM   1033  CA  SHF A 100      29.399  14.051   7.275  1.00 30.00           C
+ATOM   1034  CA  SHF A 100      29.978  14.627   7.852  1.00 30.00           C
+ATOM   1035  CA  SHF A 100      30.557  15.203   8.429  1.00 30.00           C
+ATOM   1036  CA  SHF A 100      31.136  15.779   9.006  1.00 30.00           C
+ATOM   1037  CA  SHF A 100      31.715  16.355   9.583  1.00 30.00           C
+ATOM   1038  CA  SHF A 100      32.294  16.931  10.160  1.00 30.00           C
+ATOM   1039  CA  SHF A 100      32.873  17.507  10.737  1.00 30.00           C
+ATOM   1040  CA  SHF A 100      33.452  18.083  11.314  1.00 30.00           C
+ATOM   1041  CA  SHF A 100      34.031  18.659  11.891  1.00 30.00           C
+ATOM   1042  CA  SHF A 100      34.610  19.235  12.468  1.00 30.00           C
+ATOM   1043  CA  SHF A 100      35.189  19.811  13.045  1.00 30.00           C
+ATOM   1044  CA  SHF A 100      35.768  20.387  13.622  1.00 30.00           C
+ATOM   1045  CA  SHF A 100      36.347  20.963  14.199  1.00 30.00           C
+ATOM   1046  CA  SHF A 100      36.926  21.539  14.776  1.00 30.00           C
+ATOM   1047  CA  SHF A 100      37.505  22.115  15.353  1.00 30.00           C
+ATOM   1048  CA  SHF A 100      38.084  22.691  15.930  1.00 30.00           C
+ATOM   1049  CA  SHF A 100      38.663  23.267  16.507  1.00 30.00           C
+ATOM   1050  CA  SHF A 100      39.242  23.843  17.084  1.00 30.00           C
+ATOM   1051  CA  SHF A 100      39.821  24.419  17.661  1.00 30.00           C
+ATOM   1052  CA  SHF A 100      40.400  24.995  18.238  1.00 30.00           C
+TER
+ATOM   1053  CA  ARH A 120      40.376  25.821  17.367  1.00 40.00           C
+ATOM   1054  CA  ARH A 120      39.529  25.822  18.216  1.00 40.00           C
+ATOM   1055  CA  ARH A 120      39.529  24.972  19.064  1.00 40.00           C
+ATOM   1056  CA  ARH A 120      40.376  24.123  19.062  1.00 40.00           C
+ATOM   1057  CA  ARH A 120      41.224  24.122  18.212  1.00 40.00           C
+ATOM   1058  CA  ARH A 120      41.224  24.971  17.365  1.00 40.00           C
+ATOM   1059  CA  ARH A 120      40.811  25.955  18.096  1.00 40.00           C
+ATOM   1060  CA  ARH A 120      40.260  25.956  18.648  1.00 40.00           C
+ATOM   1061  CA  ARH A 120      40.260  25.404  19.199  1.00 40.00           C
+ATOM   1062  CA  ARH A 120      40.811  24.852  19.198  1.00 40.00           C
+ATOM   1063  CA  ARH A 120      41.361  24.852  18.646  1.00 40.00           C
+ATOM   1064  CA  ARH A 120      41.361  25.404  18.095  1.00 40.00           C
+ATOM   1065  CA  ARH A 120      41.245  26.136  18.780  1.00 40.00           C
+ATOM   1066  CA  ARH A 120      40.945  26.136  19.081  1.00 40.00           C
+ATOM   1067  CA  ARH A 120      40.945  25.836  19.380  1.00 40.00           C
+ATOM   1068  CA  ARH A 120      41.245  25.536  19.380  1.00 40.00           C
+ATOM   1069  CA  ARH A 120      41.544  25.535  19.079  1.00 40.00           C
+ATOM   1070  CA  ARH A 120      41.544  25.836  18.779  1.00 40.00           C
+ATOM   1071  CA  ARH A 120      41.679  26.374  19.407  1.00 40.00           C
+ATOM   1072  CA  ARH A 120      41.573  26.374  19.513  1.00 40.00           C
+ATOM   1073  CA  ARH A 120      41.573  26.268  19.619  1.00 40.00           C
+ATOM   1074  CA  ARH A 120      41.679  26.162  19.619  1.00 40.00           C
+ATOM   1075  CA  ARH A 120      41.785  26.162  19.512  1.00 40.00           C
+ATOM   1076  CA  ARH A 120      41.785  26.268  19.406  1.00 40.00           C
+ATOM   1077  CA  ARH A 120      42.113  26.700  19.945  1.00 50.00           C
+TER
+END
