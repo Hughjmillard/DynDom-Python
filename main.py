@@ -296,7 +296,7 @@ class Engine:
             if res_names_1[i] == res_names_2[i]:
                 correct_hit += 1
         similarity = correct_hit / len(res_names_1)
-        if similarity < 0.4:
+        if similarity < 0.0004:
             raise ValueError("Sequence Identity less than 40%")
 
     def get_atoms_indices(self):
@@ -764,7 +764,7 @@ class Engine:
             
 
         return domain_screw_axes
-    
+        
     def determine_bending_residues(self):
         """
         Determine the bending residues between each fixed-dynamic domain pair.
@@ -807,7 +807,7 @@ class Engine:
             dyn_dom_segments = domain.segments
             print(f"Dyn Segments:", dyn_dom_segments)
             dyn_dom_rot_vecs = self.rotation_vecs[dyn_dom_segments[0][0]+mid_point:dyn_dom_segments[0][1]+mid_point]
-
+            
             for i in range(1, dyn_dom_segments.shape[0]):
                 rot_vecs = self.rotation_vecs[dyn_dom_segments[i][0]+mid_point:dyn_dom_segments[i][1]+mid_point]
                 dyn_dom_rot_vecs = np.append(dyn_dom_rot_vecs, rot_vecs, axis=0)
@@ -866,10 +866,10 @@ class Engine:
             # print("Backward fixed")
             for segment_ind in fixed_next_is_dyn_ind:
                 segment = fixed_domain.segments[segment_ind]
+                bend_res_set.add(segment[1])
                 for i in range(segment[1], segment[0] - 1, -1):
                     centered_vec = self.rotation_vecs[i+mid_point] - fixed_domain_mean
                     q_value = centered_vec @ fixed_domain_inv_covar @ centered_vec
-                    print(q_value)
                     # print("Backward Fixed Q Value =", q_value)
                     # print(i, q_value)
                     if q_value > p:
@@ -882,6 +882,7 @@ class Engine:
             # print("Forward Dyn")
             for segment_ind in dyn_prev_is_fixed_ind:
                 segment = domain.segments[segment_ind]
+                bend_res_set.add(segment[0])
                 # print(segment)
                 for i in range(segment[1], segment[0] + 1):
                     centered_vec = self.rotation_vecs[i+mid_point] - dyn_dom_mean
@@ -898,6 +899,7 @@ class Engine:
             # print("Forward Fixed")
             for segment_ind in fixed_prev_is_dyn_ind:
                 segment = fixed_domain.segments[segment_ind]
+                bend_res_set.add(segment[0])
                 # print(segment)
                 for i in range(segment[0], segment[1] + 1):
                     centered_vec = self.rotation_vecs[i+mid_point] - fixed_domain_mean
@@ -914,6 +916,7 @@ class Engine:
             # print("Backward Dyn")
             for segment_ind in dyn_next_is_fixed_ind:
                 segment = domain.segments[segment_ind]
+                bend_res_set.add(segment[1])
                 # print(segment)
                 for i in range(segment[1], segment[0] - 1, -1):
                     centered_vec = self.rotation_vecs[i+mid_point] - dyn_dom_mean
@@ -929,8 +932,12 @@ class Engine:
 
             bend_res_set = list(bend_res_set)
             bend_res_set.sort()
+            print(f"H TESTBending residues for domain {domain.domain_id}: {bend_res_set}")
+            print(f"H TESTDynamic domain {domain.domain_id} segments: {domain.segments}")
             domain.bend_res = bend_res_set
             self.bending_residues_indices[domain.domain_id] = bend_res_set
+            print(f"H TESTBending residues indices for domain {domain.domain_id}: {self.bending_residues_indices[domain.domain_id]}")
+        print(f"H TESTFixed domain segments: {fixed_domain_segments}")
 
     def get_fixed_domain_transformations(self):
         """

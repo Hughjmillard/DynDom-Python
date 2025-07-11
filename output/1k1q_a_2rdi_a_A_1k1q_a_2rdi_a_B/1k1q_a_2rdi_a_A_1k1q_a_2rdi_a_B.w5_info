@@ -1,0 +1,29 @@
+DynDom Python Version 1.0
+1k1q_a_2rdi_aA_1k1q_a_2rdi_aB.w5
+file name of conformer 1: 1k1q_a_2rdi_a.pdb
+chain id: A
+file name of conformer 2: 1k1q_a_2rdi_a.pdb
+chain id: B
+window length: 7
+minimum ratio of external to internal motion: 1.0
+minimum domain size: 20
+atoms to use: ['N', 'CA', 'C']
+THERE ARE 2 DOMAINS
+================================================================================
+FIXED DOMAIN
+DOMAIN NUMBER: 	 1 (coloured blue for rasmol)
+RESIDUE NUMBERS: 	4 - 241
+SIZE: 	225
+BACKBONE RMSD ON THIS DOMAIN: 	3.531A
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR 1
+DOMAIN NUMBER: 	 0 (coloured red for rasmol)
+RESIDUE NUMBERS: 	242 - 338
+SIZE: 	95
+BACKBONE RMSD ON THIS DOMAIN: 	1.521A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	4.419
+ANGLE OF ROTATION: 	178.221 DEGREES
+TRANSLATION ALONG AXIS:	7.838 A
+SCREW AXIS: 	0.644 	0.261 	-0.719
+POINT ON AXIS: 	34.859 	31.387 	12.697
+BENDING RESIDUES: 	239 - 242

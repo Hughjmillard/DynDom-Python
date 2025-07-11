@@ -18,6 +18,7 @@ class ArrowGenerator:
         self.domain_data = []
         self.fixed_domain_id = None
         self.protein_coordinates = []
+        self.domain_colors = ["blue", "red", "yellow", "pink", "cyan"]
         
     def parse_w5_info(self):
         """Parse the w5_info file to extract domain and screw axis data"""
@@ -106,10 +107,9 @@ class ArrowGenerator:
             print(f"Domain {i+1}: ID={domain['domain_id']}, has_screw_axis={('screw_axis' in domain)}")
             
         # DEBUG: Print the actual color mappings
-        domain_colors = ["blue", "red", "yellow", "green", "orange", "purple", "pink"]
-        print(f"DEBUG: Fixed domain {self.fixed_domain_id} -> color index {(self.fixed_domain_id - 1) % len(domain_colors)} -> {domain_colors[(self.fixed_domain_id - 1) % len(domain_colors)]}")
+        print(f"DEBUG: Fixed domain {self.fixed_domain_id} -> color index {(self.fixed_domain_id - 1) % len(self.domain_colors)} -> {self.domain_colors[(self.fixed_domain_id - 1) % len(self.domain_colors)]}")
         for domain in self.domain_data:
-            print(f"DEBUG: Moving domain {domain['domain_id']} -> color index {(domain['domain_id'] - 1) % len(domain_colors)} -> {domain_colors[(domain['domain_id'] - 1) % len(domain_colors)]}")
+            print(f"DEBUG: Moving domain {domain['domain_id']} -> color index {(domain['domain_id'] - 1) % len(self.domain_colors)} -> {self.domain_colors[(domain['domain_id'] - 1) % len(self.domain_colors)]}")
             
 
     def read_protein_coordinates(self):
@@ -309,11 +309,7 @@ class ArrowGenerator:
         if not self.domain_data:
             self.parse_w5_info()
             
-        pymol_filename = f"{self.output_base}_arrows.pml"
-        
-        # Domain colors (matching your current system)
-        domain_colors = ["blue", "red", "yellow", "green", "orange", "purple", "pink"]
-        
+        pymol_filename = f"{self.output_base}_arrows.pml" 
         script_lines = [
             "# DynDom Arrow Visualization Script",
             f"# Load main protein structure",
@@ -342,8 +338,8 @@ class ArrowGenerator:
             fixed_id = self.fixed_domain_id  # fixed domain
             
             # Correct assignment: shaft = fixed, head = moving
-            shaft_color = domain_colors[0]  # Fixed domain always gets blue (index 0)
-            head_color = domain_colors[1 + i]  # Moving domains get red, yellow, etc. (indices 1+)
+            shaft_color = self.domain_colors[0]  # Fixed domain always gets blue (index 0)
+            head_color = self.domain_colors[1 + i]  # Moving domains get red, yellow, etc. (indices 1+)
             
             # Use chain-specific selections to completely separate arrows
             chain_id = chr(ord('A') + i)
@@ -406,7 +402,7 @@ class ArrowGenerator:
             "delete head_*",
             "",
             "print 'DynDom arrows with 3D heads loaded successfully!'",
-            f"print 'Fixed domain: {self.fixed_domain_id} ({domain_colors[self.fixed_domain_id % len(domain_colors)]})'",
+            f"print 'Fixed domain: {self.fixed_domain_id} ({self.domain_colors[self.fixed_domain_id % len(self.domain_colors)]})'",
         ])
         
         # Add info about each moving domain
@@ -415,8 +411,8 @@ class ArrowGenerator:
             fixed_id = self.fixed_domain_id
             
             # Apply same corrected mapping as above
-            shaft_color = domain_colors[fixed_id % len(domain_colors)]   # shaft = fixed domain color
-            head_color = domain_colors[domain_id % len(domain_colors)]   # head = moving domain color
+            shaft_color = self.domain_colors[fixed_id % len(self.domain_colors)]   # shaft = fixed domain color
+            head_color = self.domain_colors[domain_id % len(self.domain_colors)]   # head = moving domain color
                 
             chain_id = chr(ord('A') + i)
             script_lines.append(f"print 'Moving domain {domain['domain_id']}: Chain {chain_id}, {shaft_color} shaft (fixed) with {head_color} head (moving), {domain.get('rotation_angle', 0):.1f}° rotation'")

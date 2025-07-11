@@ -1,0 +1,33 @@
+DynDom Clustering Log - 1m15_A_3m10_B
+Started: 2025-07-09 15:06:31
+============================================================
+
+Window 5, K=2 - 15:06:32
+  Clusters: 2 (sizes: [152, 190])
+  Min cluster size: 152
+  PASS: All checks passed (avg ratio: 1.377)
+  Domains: 2 (sizes: [151, 191])
+  Reason: All criteria met (avg ratio: 1.377, domains: 2)
+
+Window 5, K=3 - 15:06:32
+  Clusters: 3 (sizes: [191, 131, 20])
+  Min cluster size: 20
+  PASS: All checks passed (avg ratio: 1.913)
+  Domains: 3 (sizes: [193, 129, 20])
+  Reason: All criteria met (avg ratio: 1.913, domains: 3)
+
+Window 5, K=4 - 15:06:32
+  Clusters: 4 (sizes: [165, 37, 127, 13])
+  Min cluster size: 13
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small but previous valid solution exists (k=3)
+
+============================================================
+FINAL RESULT
+Time: 2025-07-09 15:06:32
+Final K: 3
+Final window: 5
+Status: 0
+Number of domains: 3
+Domain sizes: [193, 129, 20]
+============================================================

@@ -1,0 +1,47 @@
+DynDom Python Version 1.0
+betap1r104m1A_betap1r104m2B.w5
+file name of conformer 1: betap1r104m1.pdb
+chain id: A
+file name of conformer 2: betap1r104m2.pdb
+chain id: B
+window length: 5
+minimum ratio of external to internal motion: 1.0
+minimum domain size: 20
+atoms to use: ['N', 'CA', 'C']
+THERE ARE 3 DOMAINS
+================================================================================
+FIXED DOMAIN
+DOMAIN NUMBER: 	 1 (coloured blue for rasmol)
+RESIDUE NUMBERS: 	13 - 15, 80 - 91, 114 - 131, 137 - 141
+SIZE: 	38
+BACKBONE RMSD ON THIS DOMAIN: 	0.502A
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR 1
+DOMAIN NUMBER: 	 0 (coloured red for rasmol)
+RESIDUE NUMBERS: 	16 - 79
+SIZE: 	64
+BACKBONE RMSD ON THIS DOMAIN: 	0.642A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	3.358
+ANGLE OF ROTATION: 	20.283 DEGREES
+TRANSLATION ALONG AXIS:	0.848 A
+SCREW AXIS: 	-0.512 	-0.67 	0.537
+POINT ON AXIS: 	19.932 	28.996 	2.691
+BENDING RESIDUES: 	13 - 16
+BENDING RESIDUES: 	77 - 80
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR 2
+DOMAIN NUMBER: 	 2 (coloured yellow for rasmol)
+RESIDUE NUMBERS: 	3 - 12, 92 - 113, 132 - 136, 142 - 217
+SIZE: 	113
+BACKBONE RMSD ON THIS DOMAIN: 	0.405A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	1.477
+ANGLE OF ROTATION: 	8.201 DEGREES
+TRANSLATION ALONG AXIS:	0.104 A
+SCREW AXIS: 	0.867 	0.357 	0.347
+POINT ON AXIS: 	14.031 	40.271 	23.998
+BENDING RESIDUES: 	9 - 16
+BENDING RESIDUES: 	90 - 92
+BENDING RESIDUES: 	111 - 114
+BENDING RESIDUES: 	130 - 132
+BENDING RESIDUES: 	135 - 137
+BENDING RESIDUES: 	139 - 142

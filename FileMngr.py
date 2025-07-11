@@ -183,7 +183,7 @@ def write_final_output_pdb(output_path, protein_1, fitted_protein_2, fitted_prot
 def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_chain, domains, fixed_domain_id, bending_residues, window_size):
     bend_res_colour = "[0  ,255,0  ]"
     dom_colours = ["[0  ,0  ,255]", "[255,0  ,0  ]", "[255,255,0  ]", "[255,100,255]", "[0  ,255,255]"]
-
+    print(f"H TESTFileMngr bending residues: {bending_residues}")
     try:
         folder_name = f"{protein_1.name}_{protein_1.chain_param}_{protein_2_name}_{protein_2_chain}"
         dir_path_str = f"{output_path}/{folder_name}"
@@ -207,7 +207,9 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
             for i in b:
                 bb = i  # FIXED: Segments are already in sliding window indices
                 index = polymer[bb].seqid.num
+                # index = bb
                 all_bend_res_indices.append(index)
+        print(f"H TESTFileMngr bending residues indices: {all_bend_res_indices}")
 
         # Colour the fixed domains blue
         for s in range(fixed_dom_segments.shape[0]):
@@ -216,10 +218,11 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
                 j = i  # FIXED: Segments are already in sliding window indices
                 index = util_res[j]
                 res_num = polymer[index].seqid.num
+                # res_num = index
                 if res_num not in all_bend_res_indices:
                     reg.append(res_num)
             fixed_dom_res_reg.extend(group_continuous_regions(reg))
-
+        print(f"H TESTFileMngr fixed domain segments: {fixed_dom_res_reg}")
         for s in range(len(fixed_dom_res_reg)):
             print(s)
             if s == 0:
@@ -238,18 +241,19 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
             if domain.domain_id == fixed_domain_id:
                 continue
             segments = domain.segments
-            dom_bend_res = bending_residues[domain.domain_id]
+            # dom_bend_res = bending_residues[domain.domain_id]
             for s in range(segments.shape[0]):
                 reg = []
                 for i in range(segments[s][0], segments[s][1]+1):
                     j = i  # FIXED: Segments are already in sliding window indices
                     index = util_res[j]
                     res_num = polymer[index].seqid.num
-                    if res_num not in dom_bend_res:
+                    # res_num = index
+                    if res_num not in all_bend_res_indices:
                         reg.append(res_num)
 
                 dyn_dom_res_reg.extend(group_continuous_regions(reg))
-
+            print(f"H TESTFileMngr dynamic domain {domain.domain_id} segments: {dyn_dom_res_reg}")
             for s in range(len(dyn_dom_res_reg)):
                 if s == 0:
                     sel_reg_str = f"select region{region_count}, resi {dyn_dom_res_reg[s][0]}-{dyn_dom_res_reg[s][1]}\n"
@@ -263,6 +267,7 @@ def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_cha
 
         # Colour the bending residues
         bend_res_groups = group_continuous_regions(all_bend_res_indices)
+        print(f"H TESTFileMngr bending residues just before write: {bend_res_groups}")
         for g in bend_res_groups:
             fw.write(f"select region{region_count}, resi {g[0]}-{g[1]}\n")
             fw.write(f"set_color colour{region_count} = {bend_res_colour}\n")
@@ -389,7 +394,7 @@ def group_continuous_regions(data: list):
     groups = []
     for k, g in groupby(enumerate(data), lambda ix: ix[0] - ix[1]):
         temp = list(map(itemgetter(1), g))
-        groups.append([temp[0], temp[-1]+1])
+        groups.append([temp[0], temp[-1]])
     return groups
 
 
