@@ -58,7 +58,7 @@ bond shaft_2, shaft_2
 bond head_2, head_2
 
 # Arrow 3: Domain 3 (moving) relative to Domain 2 (fixed)
-# Shaft color: blue (fixed domain), Head color: green (moving domain)
+# Shaft color: blue (fixed domain), Head color: pink (moving domain)
 # Rotation: 32.9°, Translation: 1.5Å
 
 # Select shaft and head atoms by chain and residue
@@ -70,9 +70,9 @@ show sticks, shaft_3
 color blue, shaft_3
 set stick_radius, 0.3, shaft_3
 
-# Display arrow head as clean cone (MOVING domain color: green)
+# Display arrow head as clean cone (MOVING domain color: pink)
 show sticks, head_3
-color green, head_3
+color pink, head_3
 set stick_radius, 0.25, head_3
 
 # Connect atoms ONLY within each section
@@ -112,4 +112,4 @@ print 'DynDom arrows with 3D heads loaded successfully!'
 print 'Fixed domain: 2 (yellow)'
 print 'Moving domain 0: Chain A, yellow shaft (fixed) with blue head (moving), 116.3° rotation'
 print 'Moving domain 1: Chain B, yellow shaft (fixed) with red head (moving), 30.8° rotation'
-print 'Moving domain 3: Chain C, yellow shaft (fixed) with green head (moving), 32.9° rotation'
+print 'Moving domain 3: Chain C, yellow shaft (fixed) with pink head (moving), 32.9° rotation'
