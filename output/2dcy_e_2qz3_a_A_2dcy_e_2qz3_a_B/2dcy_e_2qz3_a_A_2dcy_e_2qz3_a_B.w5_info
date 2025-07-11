@@ -1,0 +1,38 @@
+DynDom Python Version 1.0
+2dcy_e_2qz3_aA_2dcy_e_2qz3_aB.w5
+file name of conformer 1: 2dcy_e_2qz3_a.pdb
+chain id: A
+file name of conformer 2: 2dcy_e_2qz3_a.pdb
+chain id: B
+window length: 5
+minimum ratio of external to internal motion: 1.0
+minimum domain size: 20
+atoms to use: ['N', 'CA', 'C']
+THERE ARE 2 DOMAINS
+================================================================================
+FIXED DOMAIN
+DOMAIN NUMBER: 	 1 (coloured blue for rasmol)
+RESIDUE NUMBERS: 	4 - 45, 49 - 68, 81 - 94, 101 - 102, 130 - 144, 151 - 159, 167 - 183
+SIZE: 	119
+BACKBONE RMSD ON THIS DOMAIN: 	0.628A
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR 1
+DOMAIN NUMBER: 	 0 (coloured red for rasmol)
+RESIDUE NUMBERS: 	46 - 48, 69 - 80, 95 - 100, 103 - 129, 145 - 150, 160 - 166
+SIZE: 	61
+BACKBONE RMSD ON THIS DOMAIN: 	0.617A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	1.173
+ANGLE OF ROTATION: 	6.755 DEGREES
+TRANSLATION ALONG AXIS:	0.063 A
+SCREW AXIS: 	-0.394 	0.134 	-0.909
+POINT ON AXIS: 	20.694 	14.247 	-7.789
+BENDING RESIDUES: 	43 - 49
+BENDING RESIDUES: 	67 - 69
+BENDING RESIDUES: 	80 - 81
+BENDING RESIDUES: 	94 - 95
+BENDING RESIDUES: 	100 - 103
+BENDING RESIDUES: 	129 - 130
+BENDING RESIDUES: 	144 - 145
+BENDING RESIDUES: 	150 - 151
+BENDING RESIDUES: 	159 - 160
+BENDING RESIDUES: 	166 - 167
