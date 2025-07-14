@@ -395,14 +395,12 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
             # === ARROW VISUALIZATION ===
             if arrow_pdb_path:
                 arrow_pdb_name = os.path.basename(arrow_pdb_path)
-                arrow_commands = _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name)
+                arrow_commands = _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_path)
                 fw.write('\n'.join(arrow_commands))
                 fw.write("\n")
             
             # === FINAL SETTINGS ===
             fw.write("# === FINAL SETTINGS ===\n")
-            fw.write("show cartoon\n")
-            fw.write("set cartoon_transparency, 0.1\n")
             fw.write("set stick_transparency, 0.0\n")
             fw.write("set stick_quality, 15\n")
             fw.write("zoom all\n")
@@ -411,8 +409,6 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
             
             # Cleanup
             fw.write("# Cleanup selections\n")
-            fw.write("delete fixed_domain\n")
-            fw.write("delete moving_domain_*\n")
             fw.write("delete bending_residues\n")
             fw.write("delete arrow_*\n")
             fw.write("\n")
@@ -535,11 +531,17 @@ def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, b
     commands.append("")
     
     return commands
-def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name):
+def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_path):
     """Generate PyMOL commands for arrow display using domain data directly"""
     commands = []
     commands.append("# === SCREW AXIS ARROWS ===")
+    commands.append(f'load {output_path}')
     commands.append(f"load {arrow_pdb_name}")
+    commands.append("")
+    commands.append("# Basic protein display")
+    commands.append(f'hide everything, {output_path}')
+    commands.append(f'show cartoon, {output_path}')
+    commands.append(f'color gray80, {output_path}')
     commands.append("")
     commands.append(f"# Hide arrow atoms initially")
     commands.append("hide everything, " + os.path.splitext(arrow_pdb_name)[0])
@@ -594,6 +596,11 @@ def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name):
         "set stick_quality, 15",
         "set sphere_quality, 3",
         "set surface_quality, 2",
+        "",
+        "# Final settings",
+        "set depth_cue, 0",
+        "set ray_shadows, 1",
+        "set ray_shadow_decay_factor, 0.1",
         "",
         "# Better lighting for 3D arrow heads",
         "set ambient, 0.2",
