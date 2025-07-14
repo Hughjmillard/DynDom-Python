@@ -1,0 +1,33 @@
+DynDom Clustering Log - 4ake_A_2eck_B
+Started: 2025-07-11 16:31:46
+============================================================
+
+Window 5, K=2 - 16:31:47
+  Clusters: 2 (sizes: [165, 45])
+  Min cluster size: 45
+  PASS: All checks passed (avg ratio: 2.617)
+  Domains: 2 (sizes: [165, 45])
+  Reason: All criteria met (avg ratio: 2.617, domains: 2)
+
+Window 5, K=3 - 16:31:47
+  Clusters: 3 (sizes: [43, 34, 133])
+  Min cluster size: 34
+  PASS: All checks passed (avg ratio: 3.879)
+  Domains: 3 (sizes: [43, 34, 133])
+  Reason: All criteria met (avg ratio: 3.879, domains: 3)
+
+Window 5, K=4 - 16:31:47
+  Clusters: 4 (sizes: [43, 132, 9, 26])
+  Min cluster size: 9
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small but previous valid solution exists (k=3)
+
+============================================================
+FINAL RESULT
+Time: 2025-07-11 16:31:47
+Final K: 3
+Final window: 5
+Status: 0
+Number of domains: 3
+Domain sizes: [43, 34, 133]
+============================================================

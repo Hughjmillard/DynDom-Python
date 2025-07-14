@@ -8,7 +8,7 @@ from difflib import SequenceMatcher
 from Clusterer import Clusterer
 from Protein import Protein
 from scipy.spatial.transform import Rotation
-from arrow_visualization import ArrowGenerator
+# from arrow_visualization import ArrowGenerator
 from clustering_logger import ClusteringLogger
 
 
@@ -159,9 +159,19 @@ class Engine:
                 self.protein_2.chain_param,
                 self.protein_2.utilised_residues_indices
             )
-            FileMngr.write_final_output_pml(self.output_path, self.protein_1, self.protein_2.name,
-                                            self.protein_2.chain_param, self.clusterer.domains,
-                                            self.clusterer.fixed_domain, self.bending_residues_indices, self.window)
+            print("=== DEBUG: About to call write_complete_pymol_script ===")
+            try:
+                result = FileMngr.write_complete_pymol_script(
+                    self.output_path, self.protein_1, self.protein_2.name,
+                    self.protein_2.chain_param, self.clusterer.domains,
+                    self.clusterer.fixed_domain, self.bending_residues_indices, 
+                    self.window
+                )
+                print(f"write_complete_pymol_script result: {result}")
+            except Exception as e:
+                print(f"ERROR in write_complete_pymol_script: {e}")
+                import traceback
+                traceback.print_exc()
             FileMngr.write_w5_info_file(self.output_path, self.protein_1.name, self.protein_1.chain_param,
                                         self.protein_2.name, self.protein_2.chain_param, self.window, self.domain,
                                         self.ratio, self.atoms_to_use, self.clusterer.domains, self.clusterer.fixed_domain,
@@ -1042,37 +1052,3 @@ engine = Engine(input_path=files_dict["input_path"], output_path=files_dict["out
 engine.run()
 
 
-# Generate arrow visualizations if analysis was successful
-try:
-    # Construct file paths based on your current naming convention
-    output_base = f"{files_dict['filename1'].split('.')[0]}_{files_dict['chain1id']}_{files_dict['filename2'].split('.')[0]}_{files_dict['chain2id']}"
-    w5_info_file = os.path.join(files_dict["output_path"], output_base, f"{output_base}.w5_info")
-    
-    # Check if w5_info file exists (indicates successful analysis)
-    if os.path.exists(w5_info_file):
-        print("\n" + "="*50)
-        print("GENERATING ARROW VISUALIZATIONS")
-        print("="*50)
-        
-        # Create arrow generator
-        arrow_gen = ArrowGenerator(w5_info_file, os.path.join(files_dict["output_path"], output_base,output_base))
-        
-        # Generate all arrow files
-        results = arrow_gen.generate_all_arrows()
-        
-        if results:
-            print(f"\nArrow files created:")
-            print(f"  PDB: {results['pdb']}")
-            print(f"  PyMOL: {results['pymol']}")
-            print(f"\nTo view: pymol {results['pymol']}")
-        else:
-            print("No arrows generated (no moving domains found)")
-            
-    else:
-        print("No w5_info file found - analysis may have failed")
-        
-except Exception as e:
-    print(f"Arrow generation failed: {e}")
-    # Don't crash the main program if arrow generation fails
-    import traceback
-    traceback.print_exc()

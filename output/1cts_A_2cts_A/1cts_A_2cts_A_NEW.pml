@@ -4,7 +4,7 @@ reinitialize
 load 1cts_A_2cts_A.pdb
 bg_color white
 color grey
-
+hide everything, output\1cts_A_2cts_A\1cts_A_2cts_A
 # === DOMAIN STRUCTURE COLORING ===
 select fixed_domain, resi 1-52
 select fixed_domain, fixed_domain + resi 65-268
@@ -41,20 +41,14 @@ set dash_gap, 0
 set dash_radius, 0.2
 
 # === SCREW AXIS ARROWS ===
-load output
 load 1cts_A_2cts_A_arrows.pdb
-
-# Basic protein display
-hide everything, output
-show cartoon, output
-color gray80, output
 
 # Hide arrow atoms initially
 hide everything, 1cts_A_2cts_A_arrows
 
 # Arrow 1: Domain 0 (moving) relative to Domain 1 (fixed)
 # Shaft color: blue (fixed domain), Head color: red (moving domain)
-# Rotation: 19.1°
+# Rotation: 19.1 
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
@@ -84,6 +78,7 @@ set sphere_quality, 3
 set surface_quality, 2
 
 # Final settings
+bg_color white
 set depth_cue, 0
 set ray_shadows, 1
 set ray_shadow_decay_factor, 0.1
@@ -99,15 +94,19 @@ delete shaft_*
 delete head_*
 
 # === FINAL SETTINGS ===
+show cartoon
+set cartoon_transparency, 0.1
 set stick_transparency, 0.0
 set stick_quality, 15
 zoom all
 orient
 
 # Cleanup selections
+delete fixed_domain
+delete moving_domain_*
 delete bending_residues
 delete arrow_*
 
 print 'DynDom complete visualization loaded!'
 print 'Fixed domain: 1 (blue)'
-print 'Moving domain 0: red, rotation 19.1°'
+print 'Moving domain 0: red, rotation 19.1 '

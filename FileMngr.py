@@ -1,11 +1,13 @@
 import traceback
 import urllib.request
+import numpy as np
+import os
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
 
 input_command_file_path = "data"
-
+DOMAIN_COLORS = ["blue", "red", "yellow", "pink", "cyan"]
 
 def read_command_file():
     temp_dict = {}
@@ -179,108 +181,440 @@ def write_final_output_pdb(output_path, protein_1, fitted_protein_2, fitted_prot
         traceback.print_exc()
         print(e)
 
-
-def write_final_output_pml(output_path, protein_1, protein_2_name, protein_2_chain, domains, fixed_domain_id, bending_residues, window_size):
-    bend_res_colour = "[0  ,255,0  ]"
-    dom_colours = ["[0  ,0  ,255]", "[255,0  ,0  ]", "[255,255,0  ]", "[255,100,255]", "[0  ,255,255]"]
-    print(f"H TESTFileMngr bending residues: {bending_residues}")
+def write_arrows_pdb(output_path, base_name, domains, fixed_domain_id, protein_1):
+    """
+    Generate arrows PDB file using domain data directly from memory
+    No need to read w5_info file - we already have all the data!
+    """
+    arrow_pdb_path = f"{output_path}/{base_name}_arrows.pdb"
+    
     try:
-        folder_name = f"{protein_1.name}_{protein_1.chain_param}_{protein_2_name}_{protein_2_chain}"
-        dir_path_str = f"{output_path}/{folder_name}"
-        dir_path = Path(dir_path_str)
-        if not dir_path.exists():
-            dir_path.mkdir(parents=True)
-        fw = open(f"{dir_path}/{folder_name}.pml", "w")
-        fw.write("reinitialize\n")
-        fw.write(f"load {folder_name}.pdb\n")
-        fw.write(f"bg_color white\n")
-        fw.write("color grey\n")
+        # Get moving domains (exclude fixed domain)
+        moving_domains = [d for d in domains if d.domain_id != fixed_domain_id]
+        
+        if not moving_domains:
+            print("No moving domains found - no arrows to generate")
+            return None
+            
+        # Read protein coordinates for proper arrow scaling
+        protein_coordinates = _read_protein_coordinates(f"{output_path}/{base_name}.pdb")
+        
+        with open(arrow_pdb_path, 'w') as f:
+            f.write("REMARK DynDom Arrow Visualization\n")
+            f.write("REMARK Shaft atoms = SHF residues\n")
+            f.write("REMARK Head atoms = ARH residues\n")
+            f.write("REMARK Each arrow uses separate chain ID (A, B, C...)\n")
+            f.write("REMARK Generated directly from domain analysis\n")
+            
+            atom_id = 1000
+            for i, domain in enumerate(moving_domains):
+                f.write(f"REMARK Arrow {i+1}: Domain {domain.domain_id} moving relative to fixed domain {fixed_domain_id}\n")
+                f.write(f"REMARK   Chain {chr(ord('A') + i)}: Rotation angle: {domain.rot_angle:.1f} degrees\n")
+                
+                # Generate arrow atoms using domain data directly
+                arrow_atoms = _create_arrow_atoms(domain, i, atom_id, protein_coordinates)
+                f.write('\n'.join(arrow_atoms))
+                f.write('\n')
+                atom_id += 200  # Large gap between arrows
+                
+            f.write("END\n")
+            
+        print(f"Arrow PDB created: {arrow_pdb_path}")
+        return arrow_pdb_path
+        
+    except Exception as e:
+        print(f"Error creating arrow PDB: {e}")
+        traceback.print_exc()
+        return None
 
-        mid_point = (window_size - 1) // 2
-        fixed_dom_segments = domains[fixed_domain_id].segments
-        util_res = protein_1.utilised_residues_indices
-        polymer = protein_1.get_polymer()
+def _read_protein_coordinates(pdb_file):
+    """Read protein coordinates for arrow scaling"""
+    coordinates = []
+    try:
+        if os.path.exists(pdb_file):
+            with open(pdb_file, 'r') as f:
+                for line in f:
+                    if line.startswith('ATOM') and line[12:16].strip() in ['CA', 'N', 'C']:
+                        x = float(line[30:38])
+                        y = float(line[38:46])
+                        z = float(line[46:54])
+                        coordinates.append([x, y, z])
+    except Exception as e:
+        print(f"Error reading protein coordinates: {e}")
+    
+    return np.array(coordinates) if coordinates else np.array([])
 
-        fixed_dom_res_reg = []
-        all_bend_res_indices = []
-        for b in bending_residues.values():
-            for i in b:
-                bb = i  # FIXED: Segments are already in sliding window indices
-                index = polymer[bb].seqid.num
-                # index = bb
-                all_bend_res_indices.append(index)
-        print(f"H TESTFileMngr bending residues indices: {all_bend_res_indices}")
 
-        # Colour the fixed domains blue
-        for s in range(fixed_dom_segments.shape[0]):
-            reg = []
-            for i in range(fixed_dom_segments[s][0], fixed_dom_segments[s][1]+1):
-                j = i  # FIXED: Segments are already in sliding window indices
-                index = util_res[j]
-                res_num = polymer[index].seqid.num
-                # res_num = index
-                if res_num not in all_bend_res_indices:
-                    reg.append(res_num)
-            fixed_dom_res_reg.extend(group_continuous_regions(reg))
-        print(f"H TESTFileMngr fixed domain segments: {fixed_dom_res_reg}")
-        for s in range(len(fixed_dom_res_reg)):
-            print(s)
-            if s == 0:
-                sel_reg_str = f"select region0, resi {fixed_dom_res_reg[s][0]}-{fixed_dom_res_reg[s][1]}\n"
-            else:
-                print(fixed_dom_res_reg[s])
-                sel_reg_str = f"select region0, region0 + resi {fixed_dom_res_reg[s][0]}-{fixed_dom_res_reg[s][1]}\n"
-            fw.write(sel_reg_str)
-        fw.write(f"set_color colour0 = {dom_colours[0]}\n")
-        fw.write("color colour0, region0\n")
+def _calculate_arrow_length(screw_axis, point_on_axis, protein_coordinates):
+    """Calculate appropriate arrow length like axleng.f does"""
+    if len(protein_coordinates) == 0:
+        return 40.0  # Default length
+        
+    # Normalize screw axis
+    unit_axis = screw_axis / np.linalg.norm(screw_axis)
+    
+    # Calculate projections of all protein atoms onto the screw axis
+    relative_coords = protein_coordinates - point_on_axis
+    projections = np.dot(relative_coords, unit_axis)
+    
+    # Find min and max projections
+    tmin = np.min(projections)
+    tmax = np.max(projections)
+    
+    # Add 10% padding on each end
+    padding = (tmax - tmin) / 10.0
+    tmin_padded = tmin - padding
+    tmax_padded = tmax + padding
+    
+    # Total length along the axis
+    total_length = max(tmax_padded - tmin_padded, 30.0)  # Minimum 30Å
+    
+    return total_length
 
-        # Colour the dynamic domains
-        region_count = 1
-        for domain in domains:
-            dyn_dom_res_reg = []
-            if domain.domain_id == fixed_domain_id:
-                continue
-            segments = domain.segments
-            # dom_bend_res = bending_residues[domain.domain_id]
-            for s in range(segments.shape[0]):
-                reg = []
-                for i in range(segments[s][0], segments[s][1]+1):
-                    j = i  # FIXED: Segments are already in sliding window indices
-                    index = util_res[j]
-                    res_num = polymer[index].seqid.num
-                    # res_num = index
-                    if res_num not in all_bend_res_indices:
-                        reg.append(res_num)
+def _create_arrow_atoms(domain, arrow_index, start_atom_id, protein_coordinates):
+    """Create PDB atom lines for an arrow using domain data directly"""
+    screw_axis = domain.screw_axis
+    point_on_axis = domain.point_on_axis
+    
+    # Normalize the screw axis
+    screw_axis = screw_axis / np.linalg.norm(screw_axis)
+    
+    # Calculate appropriate arrow length
+    base_shaft_length = _calculate_arrow_length(screw_axis, point_on_axis, protein_coordinates)
+    head_length = 3.0
+    
+    # Extend shaft backwards by 10%
+    shaft_extension = base_shaft_length * 0.1
+    total_shaft_length = base_shaft_length + shaft_extension
+    shaft_spacing = 1.0
+    
+    pdb_lines = []
+    atom_id = start_atom_id
+    
+    # Use different chain/residue IDs for each arrow
+    shaft_res_id = 100 + arrow_index * 50
+    head_res_id = shaft_res_id + 20
+    chain_id = chr(ord('A') + arrow_index)
+    
+    # === CREATE SHAFT ===
+    n_shaft_atoms = int(total_shaft_length / shaft_spacing)
+    for i in range(n_shaft_atoms):
+        t = -(base_shaft_length/2 + shaft_extension) + i * shaft_spacing
+        pos = point_on_axis + t * screw_axis
+        
+        pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
+        pdb_lines.append(pdb_line)
+        atom_id += 1
+        
+    pdb_lines.append("TER")
+    
+    # === CREATE ARROW HEAD ===
+    # Create perpendicular vectors for cone base
+    if abs(screw_axis[0]) < 0.9:
+        temp_vec = np.array([1.0, 0.0, 0.0])
+    else:
+        temp_vec = np.array([0.0, 1.0, 0.0])
+    
+    perp1 = np.cross(screw_axis, temp_vec)
+    perp1 = perp1 / np.linalg.norm(perp1)
+    perp2 = np.cross(screw_axis, perp1)
+    perp2 = perp2 / np.linalg.norm(perp2)
+    
+    # Arrow head overlaps with shaft end
+    head_overlap = 2.0
+    head_start_pos = point_on_axis + (base_shaft_length/2 - head_overlap) * screw_axis
+    
+    # Create cone structure
+    n_layers = 4
+    n_points_per_layer = 6
+    
+    for layer in range(n_layers + 1):
+        layer_progress = layer / n_layers
+        layer_pos = head_start_pos + layer_progress * head_length * screw_axis
+        
+        max_radius = 1.2
+        layer_radius = max_radius * (1.0 - layer_progress) ** 1.5
+        
+        if layer == n_layers:
+            # Tip of arrow
+            pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {layer_pos[0]:8.3f}{layer_pos[1]:8.3f}{layer_pos[2]:8.3f}  1.00 50.00           C"
+            pdb_lines.append(pdb_line)
+            atom_id += 1
+        else:
+            # Circular layer
+            for point in range(n_points_per_layer):
+                angle = 2 * np.pi * point / n_points_per_layer
+                
+                circle_pos = (layer_pos + 
+                             layer_radius * np.cos(angle) * perp1 + 
+                             layer_radius * np.sin(angle) * perp2)
+                
+                pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {circle_pos[0]:8.3f}{circle_pos[1]:8.3f}{circle_pos[2]:8.3f}  1.00 40.00           C"
+                pdb_lines.append(pdb_line)
+                atom_id += 1
+    
+    pdb_lines.append("TER")
+    return pdb_lines
 
-                dyn_dom_res_reg.extend(group_continuous_regions(reg))
-            print(f"H TESTFileMngr dynamic domain {domain.domain_id} segments: {dyn_dom_res_reg}")
-            for s in range(len(dyn_dom_res_reg)):
-                if s == 0:
-                    sel_reg_str = f"select region{region_count}, resi {dyn_dom_res_reg[s][0]}-{dyn_dom_res_reg[s][1]}\n"
-                else:
-                    sel_reg_str = f"select region{region_count}, region{region_count} + resi {dyn_dom_res_reg[s][0]}-{dyn_dom_res_reg[s][1]}\n"
-                fw.write(sel_reg_str)
-            fw.write(f"set_color colour{region_count} = {dom_colours[region_count]}\n")
-            fw.write(f"color colour{region_count}, region{region_count}\n")
-
-            region_count += 1
-
-        # Colour the bending residues
-        bend_res_groups = group_continuous_regions(all_bend_res_indices)
-        print(f"H TESTFileMngr bending residues just before write: {bend_res_groups}")
-        for g in bend_res_groups:
-            fw.write(f"select region{region_count}, resi {g[0]}-{g[1]}\n")
-            fw.write(f"set_color colour{region_count} = {bend_res_colour}\n")
-            fw.write(f"color colour{region_count}, region{region_count}\n")
-            region_count += 1
-
-        fw.write("set dash_gap, 0\n")
-        fw.write("set dash_radius, 0.2\n")
-
+def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_2_chain, 
+                              domains, fixed_domain_id, bending_residues, window_size):
+    """
+    Generate single PyMOL script with both structure coloring and arrows
+    Uses domain data directly from memory - no file I/O roundtrip needed!
+    """
+    
+    folder_name = f"{protein_1.name}_{protein_1.chain_param}_{protein_2_name}_{protein_2_chain}"
+    dir_path_str = f"{output_path}/{folder_name}"
+    dir_path = Path(dir_path_str)
+    if not dir_path.exists():
+        dir_path.mkdir(parents=True)
+    
+    # Generate arrow PDB using domain data directly
+    arrow_pdb_path = write_arrows_pdb(dir_path_str, folder_name, domains, fixed_domain_id, protein_1)
+    
+    # Generate combined PyMOL script
+    pml_file = f"{dir_path_str}/{folder_name}.pml"
+    
+    try:
+        with open(pml_file, 'w') as fw:
+            # === HEADER ===
+            fw.write("# DynDom Complete Visualization\n")
+            fw.write("# Domain-colored structure with screw axis arrows\n")
+            fw.write("reinitialize\n")
+            fw.write(f"load {folder_name}.pdb\n")
+            fw.write("bg_color white\n")
+            fw.write("color grey\n")
+            fw.write("\n")
+            
+            # === STRUCTURE DOMAIN COLORING ===
+            structure_commands = _generate_structure_coloring_commands(
+                protein_1, domains, fixed_domain_id, bending_residues, window_size)
+            fw.write('\n'.join(structure_commands))
+            fw.write("\n")
+            
+            # === ARROW VISUALIZATION ===
+            if arrow_pdb_path:
+                arrow_pdb_name = os.path.basename(arrow_pdb_path)
+                arrow_commands = _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_path)
+                fw.write('\n'.join(arrow_commands))
+                fw.write("\n")
+            
+            # === FINAL SETTINGS ===
+            fw.write("# === FINAL SETTINGS ===\n")
+            fw.write("set stick_transparency, 0.0\n")
+            fw.write("set stick_quality, 15\n")
+            fw.write("zoom all\n")
+            fw.write("orient\n")
+            fw.write("\n")
+            
+            # Cleanup
+            fw.write("# Cleanup selections\n")
+            fw.write("delete bending_residues\n")
+            fw.write("delete arrow_*\n")
+            fw.write("\n")
+            
+            # Status messages
+            fw.write("print 'DynDom complete visualization loaded!'\n")
+            fw.write(f"print 'Fixed domain: {fixed_domain_id} ({DOMAIN_COLORS[0]})'\n")
+            
+            moving_count = 0
+            for domain in domains:
+                if domain.domain_id != fixed_domain_id:
+                    color_index = 1 + moving_count
+                    if color_index < len(DOMAIN_COLORS):
+                        color = DOMAIN_COLORS[color_index]
+                    else:
+                        color = DOMAIN_COLORS[color_index % len(DOMAIN_COLORS)]
+                    fw.write(f"print 'Moving domain {domain.domain_id}: {color}, rotation {domain.rot_angle:.1f}°'\n")
+                    moving_count += 1
+            
+        print(f"Complete PyMOL script created: {pml_file}")
+        return pml_file
+        
     except Exception as e:
         traceback.print_exc()
-        print(e)
+        print(f"Error creating complete PyMOL script: {e}")
+        return None
+    
+def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, bending_residues, window_size):
+    """Generate PyMOL commands for structure domain coloring"""
+    commands = []
+    commands.append("# === DOMAIN STRUCTURE COLORING ===")
+    
+    mid_point = (window_size - 1) // 2
+    fixed_dom_segments = domains[fixed_domain_id].segments
+    util_res = protein_1.utilised_residues_indices
+    polymer = protein_1.get_polymer()
 
+    # Collect all bending residue indices
+    all_bend_res_indices = []
+    for b in bending_residues.values():
+        for i in b:
+            bb = i  # Segments are already in sliding window indices
+            index = polymer[bb].seqid.num
+            all_bend_res_indices.append(index)
+    
+    print(f"DEBUG: Bending residues indices: {all_bend_res_indices}")
+
+    # Color the fixed domain (blue)
+    fixed_dom_res_reg = []
+    for s in range(fixed_dom_segments.shape[0]):
+        reg = []
+        for i in range(fixed_dom_segments[s][0], fixed_dom_segments[s][1]+1):
+            j = i  # Segments are already in sliding window indices
+            index = util_res[j]
+            res_num = polymer[index].seqid.num
+            if res_num not in all_bend_res_indices:
+                reg.append(res_num)
+        fixed_dom_res_reg.extend(group_continuous_regions(reg))
+    
+    print(f"DEBUG: Fixed domain segments: {fixed_dom_res_reg}")
+    
+    # Generate selection commands for fixed domain
+    for s in range(len(fixed_dom_res_reg)):
+        if s == 0:
+            commands.append(f"select fixed_domain, resi {fixed_dom_res_reg[s][0]}-{fixed_dom_res_reg[s][1]}")
+        else:
+            commands.append(f"select fixed_domain, fixed_domain + resi {fixed_dom_res_reg[s][0]}-{fixed_dom_res_reg[s][1]}")
+    
+    commands.append(f"color {DOMAIN_COLORS[0]}, fixed_domain")
+    commands.append("")
+
+    # Color the dynamic domains
+    region_count = 1
+    for domain in domains:
+        if domain.domain_id == fixed_domain_id:
+            continue
+            
+        dyn_dom_res_reg = []
+        segments = domain.segments
+        
+        for s in range(segments.shape[0]):
+            reg = []
+            for i in range(segments[s][0], segments[s][1]+1):
+                j = i  # Segments are already in sliding window indices
+                index = util_res[j]
+                res_num = polymer[index].seqid.num
+                if res_num not in all_bend_res_indices:
+                    reg.append(res_num)
+            dyn_dom_res_reg.extend(group_continuous_regions(reg))
+        
+        print(f"DEBUG: Dynamic domain {domain.domain_id} segments: {dyn_dom_res_reg}")
+        
+        # Generate selection commands for this dynamic domain
+        for s in range(len(dyn_dom_res_reg)):
+            if s == 0:
+                commands.append(f"select moving_domain_{domain.domain_id}, resi {dyn_dom_res_reg[s][0]}-{dyn_dom_res_reg[s][1]}")
+            else:
+                commands.append(f"select moving_domain_{domain.domain_id}, moving_domain_{domain.domain_id} + resi {dyn_dom_res_reg[s][0]}-{dyn_dom_res_reg[s][1]}")
+        
+        # Use DOMAIN_COLORS array with bounds checking
+        color_index = min(region_count, len(DOMAIN_COLORS) - 1)
+        commands.append(f"color {DOMAIN_COLORS[color_index]}, moving_domain_{domain.domain_id}")
+        commands.append("")
+        region_count += 1
+
+    # Color the bending residues (green)
+    bend_res_groups = group_continuous_regions(all_bend_res_indices)
+    print(f"DEBUG: Bending residues groups: {bend_res_groups}")
+    
+    if bend_res_groups:
+        commands.append("# Color bending residues")
+        for i, g in enumerate(bend_res_groups):
+            commands.append(f"select bending_residues_{i+1}, resi {g[0]}-{g[1]}")
+            commands.append(f"color green, bending_residues_{i+1}")
+        commands.append("")
+
+    # Additional PyMOL settings
+    commands.append("set dash_gap, 0")
+    commands.append("set dash_radius, 0.2")
+    commands.append("")
+    
+    return commands
+def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_path):
+    """Generate PyMOL commands for arrow display using domain data directly"""
+    commands = []
+    commands.append("# === SCREW AXIS ARROWS ===")
+    commands.append(f'load {output_path}')
+    commands.append(f"load {arrow_pdb_name}")
+    commands.append("")
+    commands.append("# Basic protein display")
+    commands.append(f'hide everything, {output_path}')
+    commands.append(f'show cartoon, {output_path}')
+    commands.append(f'color gray80, {output_path}')
+    commands.append("")
+    commands.append(f"# Hide arrow atoms initially")
+    commands.append("hide everything, " + os.path.splitext(arrow_pdb_name)[0])
+    commands.append("")
+    
+    moving_domains = [d for d in domains if d.domain_id != fixed_domain_id]
+    
+    # Add arrow visualization for each domain
+    for i, domain in enumerate(moving_domains):
+        moving_domain_id = domain.domain_id
+        
+        # Correct assignment: shaft = fixed, head = moving
+        shaft_color = DOMAIN_COLORS[0]  # Fixed domain always gets blue (index 0)
+        head_color = DOMAIN_COLORS[1 + i]  # Moving domains get red, yellow, etc. (indices 1+)
+        
+        # Use chain-specific selections to completely separate arrows
+        chain_id = chr(ord('A') + i)
+        shaft_res_id = 100 + i * 50
+        head_res_id = shaft_res_id + 20
+        
+        commands.extend([
+            f"# Arrow {i+1}: Domain {moving_domain_id} (moving) relative to Domain {fixed_domain_id} (fixed)",
+            f"# Shaft color: {shaft_color} (fixed domain), Head color: {head_color} (moving domain)",
+            f"# Rotation: {domain.rot_angle:.1f}°",
+            "",
+            f"# Select shaft and head atoms by chain and residue",
+            f"select shaft_{i+1}, chain {chain_id} and resn SHF and resi {shaft_res_id}",
+            f"select head_{i+1}, chain {chain_id} and resn ARH and resi {head_res_id}",
+            "",
+            f"# Display shaft as thick licorice stick (FIXED domain color: {shaft_color})",
+            f"show sticks, shaft_{i+1}",
+            f"color {shaft_color}, shaft_{i+1}",
+            f"set stick_radius, 0.3, shaft_{i+1}",  # Thicker for licorice style
+            "",
+            f"# Display arrow head as clean cone (MOVING domain color: {head_color})",
+            f"show sticks, head_{i+1}",
+            f"color {head_color}, head_{i+1}",
+            f"set stick_radius, 0.25, head_{i+1}",
+            "",
+            f"# Connect atoms ONLY within each section",
+            f"bond shaft_{i+1}, shaft_{i+1}",
+            f"bond head_{i+1}, head_{i+1}",
+            "",
+        ])
+        
+    commands.extend([
+        "# Disable automatic bonding between different chains",
+        "set auto_bond, 0",
+        "",
+        "# Make arrows more prominent",
+        "set stick_transparency, 0.0",
+        "set stick_quality, 15",
+        "set sphere_quality, 3",
+        "set surface_quality, 2",
+        "",
+        "# Final settings",
+        "set depth_cue, 0",
+        "set ray_shadows, 1",
+        "set ray_shadow_decay_factor, 0.1",
+        "",
+        "# Better lighting for 3D arrow heads",
+        "set ambient, 0.2",
+        "set direct, 0.8",
+        "set reflect, 0.5",
+        "set shininess, 10",
+        "",
+        "# Clean up selections", 
+        "delete shaft_*",
+        "delete head_*",
+        "",
+    ])
+    
+    return commands
 
 def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name: str, chain_2, window, domain_size, ratio, atoms,
                        domains: list, fixed_domain_id: int, protein_1):
