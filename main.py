@@ -8,7 +8,6 @@ from difflib import SequenceMatcher
 from Clusterer import Clusterer
 from Protein import Protein
 from scipy.spatial.transform import Rotation
-# from arrow_visualization import ArrowGenerator
 from clustering_logger import ClusteringLogger
 
 
