@@ -68,10 +68,6 @@ class ClusteringLogger:
                 f.write(f"  Reason: {reason}\n")
             
             f.write("\n")
-        
-        # Simple console output
-        status = "PASS" if decision == 'accept' else "FAIL"
-        print(f"w{window_size} k{k}: {status}")
     
     def log_window_change(self, old_window, new_window, reason):
         """Log window size change."""
@@ -80,8 +76,6 @@ class ClusteringLogger:
             f.write(f"  Reason: {reason}\n")
             f.write(f"  Time: {datetime.now().strftime('%H:%M:%S')}\n")
             f.write("-" * 40 + "\n\n")
-        
-        print(f"Window size changed: {old_window} -> {new_window}")
     
     def log_final_result(self, final_k, final_domains, final_window, 
                         clusterer_status, total_attempts):
@@ -101,4 +95,4 @@ class ClusteringLogger:
             
             f.write("=" * 60 + "\n")
         
-        print(f"Clustering complete - see {self.log_file}")
+        # print(f"Clustering complete - see {self.log_file}")

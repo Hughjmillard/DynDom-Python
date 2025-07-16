@@ -31,7 +31,13 @@ set dash_gap, 0
 set dash_radius, 0.2
 
 # === SCREW AXIS ARROWS ===
+load output
 load 4ake_A_2eck_B_arrows.pdb
+
+# Basic protein display
+hide everything, output
+show cartoon, output
+color gray80, output
 
 # Hide arrow atoms initially
 hide everything, 4ake_A_2eck_B_arrows
@@ -89,6 +95,11 @@ set stick_quality, 15
 set sphere_quality, 3
 set surface_quality, 2
 
+# Final settings
+set depth_cue, 0
+set ray_shadows, 1
+set ray_shadow_decay_factor, 0.1
+
 # Better lighting for 3D arrow heads
 set ambient, 0.2
 set direct, 0.8
@@ -100,16 +111,12 @@ delete shaft_*
 delete head_*
 
 # === FINAL SETTINGS ===
-show cartoon
-set cartoon_transparency, 0.1
 set stick_transparency, 0.0
 set stick_quality, 15
 zoom all
 orient
 
 # Cleanup selections
-delete fixed_domain
-delete moving_domain_*
 delete bending_residues
 delete arrow_*
 

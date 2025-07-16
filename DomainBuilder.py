@@ -11,7 +11,6 @@ def domain_builder(protein_1, protein_2, segments_dict: dict, min_domain: int):
     connected with another segment in the same cluster.
     :return: List of Domain objects
     """
-    print("Building domains")
     domains_1 = []
     domains_2 = []
     break_cluster = False
@@ -23,25 +22,15 @@ def domain_builder(protein_1, protein_2, segments_dict: dict, min_domain: int):
         # Create a binary connection matrix for both proteins from the cluster segments
         bin_mat_1 = create_bin_conn_mat(protein_1_slide_win_res, cluster_segments)
         bin_mat_2 = create_bin_conn_mat(protein_2_slide_win_res, cluster_segments)
-        # print(f"Binary Matrix: \n{bin_mat_1}")
-        # print(f"Binary Matrix: \n{bin_mat_2}")
         # List of Numpy arrays of the binary connection matrix after reduction
         reduced_mat_1 = row_reduction(bin_mat_1)
         reduced_mat_2 = row_reduction(bin_mat_2)
-        # print(f"Reduced Matrix: {reduced_mat_1}")
-        # print(f"Reduced Matrix: \n{reduced_mat_2}")
         domains_1, contains_valid_domains_1 = create_cluster_domains(cluster_segments=cluster_segments,
                                                                      domains=domains_1, reduced_mat=reduced_mat_1,
                                                                      min_domain_size=min_domain, cluster_id=cluster)
         domains_2, contains_valid_domains_2 = create_cluster_domains(cluster_segments=cluster_segments,
                                                                      domains=domains_2, reduced_mat=reduced_mat_2,
                                                                      min_domain_size=min_domain, cluster_id=cluster)
-        # print("Cluster: ", cluster)
-        # print("Protein 1 Domains: \n")
-        # print_domains(domains_1, False)
-        # print("Protein 2 Domains: \n")
-        # print_domains(domains_2, False)
-
         # If both proteins do not have at least one domain with the minimum number of residues for the cluster,
         # the condition is not met
         if not (contains_valid_domains_1 or contains_valid_domains_2):
@@ -201,10 +190,8 @@ def join_domains(tiny_domain: Domain, domains: list):
         next_connecting_index = tiny_domain_segments[ts][1] + 1
         # If the previous index of the segment is -1, it means the segment is at the tail end of the protein chain.
         if prev_connecting_index == -1:
-            print("Segment is at tail end of protein chain")
             for curr_d in domains:
                 if next_connecting_index in curr_d.segments:
-                    print("Found segment to connect tail")
                     curr_d.add_segment(tiny_domain_segments[ts], add_at_left_side=True)
                     break
             continue
@@ -295,12 +282,5 @@ def check_connection_between_atoms(residue_atoms: np.array, segment_atoms: np.ar
     dist_criteria = 4 if side_chain else 10
     kdt = KDTree(segment_atoms, metric="euclidean")
     count = kdt.query_radius(residue_atoms, r=dist_criteria, count_only=True)
-    # print(f"Count: {count} {True if any(c > 0 for c in count) else False}")
     return True if any(c > 0 for c in count) else False
-
-
-def print_domains(domains: list, after_removal=False):
-    print("AAAAAAAAAAA \nAfter: \nAAAAAAAAAAA") if after_removal else print("BBBBBBBBBBBBB \nBefore: \nBBBBBBBBBBBBB")
-    for d in domains:
-        print(d)
 

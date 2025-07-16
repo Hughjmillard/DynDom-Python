@@ -1,20 +1,96 @@
+# DynDom Complete Visualization
+# Domain-colored structure with screw axis arrows
 reinitialize
 load 1k1q_a_2rdi_a_A_1k1q_a_2rdi_a_B.pdb
 bg_color white
 color grey
-select region0, resi 1-34
-select region0, region0 + resi 46-117
-select region0, region0 + resi 118-235
-select region0, region0 + resi 238-239
-set_color colour0 = [0  ,0  ,255]
-color colour0, region0
-select region1, resi 239-279
-select region1, region1 + resi 280-330
-select region1, region1 + resi 331-336
-set_color colour1 = [255,0  ,0  ]
-color colour1, region1
-select region2, resi 235-238
-set_color colour2 = [0  ,255,0  ]
-color colour2, region2
+
+# === DOMAIN STRUCTURE COLORING ===
+select fixed_domain, resi 1-33
+select fixed_domain, fixed_domain + resi 46-116
+select fixed_domain, fixed_domain + resi 118-234
+color blue, fixed_domain
+
+select moving_domain_0, resi 239-278
+select moving_domain_0, moving_domain_0 + resi 280-329
+select moving_domain_0, moving_domain_0 + resi 331-335
+color red, moving_domain_0
+
+# Color bending residues
+select bending_residues_1, resi 235-238
+color green, bending_residues_1
+
 set dash_gap, 0
 set dash_radius, 0.2
+
+# === SCREW AXIS ARROWS ===
+load output
+load 1k1q_a_2rdi_a_A_1k1q_a_2rdi_a_B_arrows.pdb
+
+# Basic protein display
+hide everything, output
+show cartoon, output
+color gray80, output
+
+# Hide arrow atoms initially
+hide everything, 1k1q_a_2rdi_a_A_1k1q_a_2rdi_a_B_arrows
+
+# Arrow 1: Domain 0 (moving) relative to Domain 1 (fixed)
+# Shaft color: blue (fixed domain), Head color: red (moving domain)
+# Rotation: 178.2°
+
+# Select shaft and head atoms by chain and residue
+select shaft_1, chain A and resn SHF and resi 100
+select head_1, chain A and resn ARH and resi 120
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_1
+color blue, shaft_1
+set stick_radius, 0.3, shaft_1
+
+# Display arrow head as clean cone (MOVING domain color: red)
+show sticks, head_1
+color red, head_1
+set stick_radius, 0.25, head_1
+
+# Connect atoms ONLY within each section
+bond shaft_1, shaft_1
+bond head_1, head_1
+
+# Disable automatic bonding between different chains
+set auto_bond, 0
+
+# Make arrows more prominent
+set stick_transparency, 0.0
+set stick_quality, 15
+set sphere_quality, 3
+set surface_quality, 2
+
+# Final settings
+set depth_cue, 0
+set ray_shadows, 1
+set ray_shadow_decay_factor, 0.1
+
+# Better lighting for 3D arrow heads
+set ambient, 0.2
+set direct, 0.8
+set reflect, 0.5
+set shininess, 10
+
+# Clean up selections
+delete shaft_*
+delete head_*
+
+# === FINAL SETTINGS ===
+set stick_transparency, 0.0
+set stick_quality, 15
+zoom all
+orient
+
+# Cleanup selections
+delete bending_residues
+delete arrow_*
+
+print 'DynDom complete visualization loaded!'
+print 'Fixed domain: 1 (blue)'
+print 'Moving domain 0: red, rotation 178.2°'

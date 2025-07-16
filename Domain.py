@@ -57,18 +57,9 @@ class Domain:
         Domain segments = [[0, 34] [54, 67]]
         :return:
         """
-        print("Adding segment")
-        print(self.segments)
-        print("The segment")
-        print(segment)
         if add_at_left_side:
             # Get the index where the segment joins. There should only be one index found.
             index = np.where(self.segments[:, 0] == (segment[1] + 1))
-            # print("add_at_left_side", add_at_left_side)
-            # print("segment\n", segment)
-            # print("segments\n", self.segments)
-            # print("index", index)
-            # print("\n")
             self.segments[index[0][0]][0] = segment[0]
 
         else:
@@ -96,8 +87,6 @@ class Domain:
             if no_continuous_segments:
                 break
 
-        print("After adding")
-        print(self.segments)
 
     def count_residues(self):
         self.num_residues = sum(self.segments[:, 1] + 1 - self.segments[:, 0])

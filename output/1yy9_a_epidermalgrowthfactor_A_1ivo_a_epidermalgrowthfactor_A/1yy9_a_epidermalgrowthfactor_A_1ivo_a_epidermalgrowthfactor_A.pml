@@ -40,57 +40,114 @@ set dash_gap, 0
 set dash_radius, 0.2
 
 # === SCREW AXIS ARROWS ===
+load output
 load 1yy9_a_epidermalgrowthfactor_A_1ivo_a_epidermalgrowthfactor_A_arrows.pdb
+
+# Basic protein display
+hide everything, output
+show cartoon, output
+color gray80, output
+
+# Hide arrow atoms initially
 hide everything, 1yy9_a_epidermalgrowthfactor_A_1ivo_a_epidermalgrowthfactor_A_arrows
 
-# Arrow 1: Domain 0 movement (116.3°)
-select arrow_shaft_1, chain A and resn SHF and resi 100
-select arrow_head_1, chain A and resn ARH and resi 120
-show sticks, arrow_shaft_1
-show sticks, arrow_head_1
-color blue, arrow_shaft_1
-color red, arrow_head_1
-set stick_radius, 0.3, arrow_shaft_1
-set stick_radius, 0.25, arrow_head_1
-bond arrow_shaft_1, arrow_shaft_1
-bond arrow_head_1, arrow_head_1
+# Arrow 1: Domain 0 (moving) relative to Domain 2 (fixed)
+# Shaft color: blue (fixed domain), Head color: red (moving domain)
+# Rotation: 116.3°
 
-# Arrow 2: Domain 1 movement (30.8°)
-select arrow_shaft_2, chain B and resn SHF and resi 150
-select arrow_head_2, chain B and resn ARH and resi 170
-show sticks, arrow_shaft_2
-show sticks, arrow_head_2
-color blue, arrow_shaft_2
-color yellow, arrow_head_2
-set stick_radius, 0.3, arrow_shaft_2
-set stick_radius, 0.25, arrow_head_2
-bond arrow_shaft_2, arrow_shaft_2
-bond arrow_head_2, arrow_head_2
+# Select shaft and head atoms by chain and residue
+select shaft_1, chain A and resn SHF and resi 100
+select head_1, chain A and resn ARH and resi 120
 
-# Arrow 3: Domain 3 movement (32.9°)
-select arrow_shaft_3, chain C and resn SHF and resi 200
-select arrow_head_3, chain C and resn ARH and resi 220
-show sticks, arrow_shaft_3
-show sticks, arrow_head_3
-color blue, arrow_shaft_3
-color pink, arrow_head_3
-set stick_radius, 0.3, arrow_shaft_3
-set stick_radius, 0.25, arrow_head_3
-bond arrow_shaft_3, arrow_shaft_3
-bond arrow_head_3, arrow_head_3
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_1
+color blue, shaft_1
+set stick_radius, 0.3, shaft_1
 
+# Display arrow head as clean cone (MOVING domain color: red)
+show sticks, head_1
+color red, head_1
+set stick_radius, 0.25, head_1
+
+# Connect atoms ONLY within each section
+bond shaft_1, shaft_1
+bond head_1, head_1
+
+# Arrow 2: Domain 1 (moving) relative to Domain 2 (fixed)
+# Shaft color: blue (fixed domain), Head color: yellow (moving domain)
+# Rotation: 30.8°
+
+# Select shaft and head atoms by chain and residue
+select shaft_2, chain B and resn SHF and resi 150
+select head_2, chain B and resn ARH and resi 170
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_2
+color blue, shaft_2
+set stick_radius, 0.3, shaft_2
+
+# Display arrow head as clean cone (MOVING domain color: yellow)
+show sticks, head_2
+color yellow, head_2
+set stick_radius, 0.25, head_2
+
+# Connect atoms ONLY within each section
+bond shaft_2, shaft_2
+bond head_2, head_2
+
+# Arrow 3: Domain 3 (moving) relative to Domain 2 (fixed)
+# Shaft color: blue (fixed domain), Head color: pink (moving domain)
+# Rotation: 32.9°
+
+# Select shaft and head atoms by chain and residue
+select shaft_3, chain C and resn SHF and resi 200
+select head_3, chain C and resn ARH and resi 220
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_3
+color blue, shaft_3
+set stick_radius, 0.3, shaft_3
+
+# Display arrow head as clean cone (MOVING domain color: pink)
+show sticks, head_3
+color pink, head_3
+set stick_radius, 0.25, head_3
+
+# Connect atoms ONLY within each section
+bond shaft_3, shaft_3
+bond head_3, head_3
+
+# Disable automatic bonding between different chains
 set auto_bond, 0
+
+# Make arrows more prominent
+set stick_transparency, 0.0
+set stick_quality, 15
+set sphere_quality, 3
+set surface_quality, 2
+
+# Final settings
+set depth_cue, 0
+set ray_shadows, 1
+set ray_shadow_decay_factor, 0.1
+
+# Better lighting for 3D arrow heads
+set ambient, 0.2
+set direct, 0.8
+set reflect, 0.5
+set shininess, 10
+
+# Clean up selections
+delete shaft_*
+delete head_*
+
 # === FINAL SETTINGS ===
-show cartoon
-set cartoon_transparency, 0.1
 set stick_transparency, 0.0
 set stick_quality, 15
 zoom all
 orient
 
 # Cleanup selections
-delete fixed_domain
-delete moving_domain_*
 delete bending_residues
 delete arrow_*
 
