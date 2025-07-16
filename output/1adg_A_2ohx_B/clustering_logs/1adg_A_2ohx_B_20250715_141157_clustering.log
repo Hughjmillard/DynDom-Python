@@ -1,0 +1,80 @@
+DynDom Clustering Log - 1adg_A_2ohx_B
+Started: 2025-07-15 14:11:57
+============================================================
+
+Window 5, K=2 - 14:11:57
+  Clusters: 2 (sizes: [3, 367])
+  Min cluster size: 3
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=1)
+
+Window 5, K=3 - 14:11:57
+  Clusters: 3 (sizes: [367, 2, 1])
+  Min cluster size: 1
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=2)
+
+Window 5, K=4 - 14:11:57
+  Clusters: 4 (sizes: [367, 1, 1, 1])
+  Min cluster size: 1
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=3)
+
+Window 5, K=5 - 14:11:57
+  Clusters: 5 (sizes: [1, 1, 1, 143, 224])
+  Min cluster size: 1
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=4)
+
+Window 5, K=6 - 14:11:57
+  Clusters: 6 (sizes: [1, 1, 1, 223, 1, 143])
+  Min cluster size: 1
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=5)
+
+Window 5, K=7 - 14:11:57
+  Clusters: 7 (sizes: [1, 1, 1, 1, 135, 105, 126])
+  Min cluster size: 1
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small, no previous valid solutions (fails=6)
+
+WINDOW SIZE CHANGE: 5 -> 7
+  Reason: Too many consecutive failures (6)
+  Time: 14:11:57
+----------------------------------------
+
+============================================================
+FINAL RESULT
+Time: 2025-07-15 14:11:57
+Final K: None
+Final window: 5
+Status: -1
+Number of domains: 0
+============================================================
+WINDOW SIZE CHANGE: 5 -> 7
+  Reason: Clustering failed, trying larger window
+  Time: 14:11:57
+----------------------------------------
+
+Window 7, K=2 - 14:11:58
+  Clusters: 2 (sizes: [232, 136])
+  Min cluster size: 136
+  PASS: All checks passed (avg ratio: 2.163)
+  Domains: 2 (sizes: [232, 136])
+  Reason: All criteria met (avg ratio: 2.163, domains: 2)
+
+Window 7, K=3 - 14:11:58
+  Clusters: 3 (sizes: [136, 5, 227])
+  Min cluster size: 5
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small but previous valid solution exists (k=2)
+
+============================================================
+FINAL RESULT
+Time: 2025-07-15 14:11:58
+Final K: 2
+Final window: 7
+Status: 0
+Number of domains: 2
+Domain sizes: [232, 136]
+============================================================

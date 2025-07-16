@@ -7,7 +7,7 @@ from operator import itemgetter
 from pathlib import Path
 
 input_command_file_path = "data"
-DOMAIN_COLORS = ["blue", "red", "yellow", "pink", "cyan"]
+DOMAIN_COLORS = ["blue", "red", "yellow", "pink", "cyan", "purple", "orange", "brown", "black", "white", "magenta", "violet", "indigo", "turquoise", "coral"]
 
 def read_command_file():
     temp_dict = {}
@@ -454,7 +454,7 @@ def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, b
             index = polymer[bb].seqid.num
             all_bend_res_indices.append(index)
     
-    print(f"DEBUG: Bending residues indices: {all_bend_res_indices}")
+
 
     # Color the fixed domain (blue)
     fixed_dom_res_reg = []
@@ -467,8 +467,6 @@ def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, b
             if res_num not in all_bend_res_indices:
                 reg.append(res_num)
         fixed_dom_res_reg.extend(group_continuous_regions(reg))
-    
-    print(f"DEBUG: Fixed domain segments: {fixed_dom_res_reg}")
     
     # Generate selection commands for fixed domain
     for s in range(len(fixed_dom_res_reg)):
@@ -499,8 +497,6 @@ def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, b
                     reg.append(res_num)
             dyn_dom_res_reg.extend(group_continuous_regions(reg))
         
-        print(f"DEBUG: Dynamic domain {domain.domain_id} segments: {dyn_dom_res_reg}")
-        
         # Generate selection commands for this dynamic domain
         for s in range(len(dyn_dom_res_reg)):
             if s == 0:
@@ -516,7 +512,6 @@ def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, b
 
     # Color the bending residues (green)
     bend_res_groups = group_continuous_regions(all_bend_res_indices)
-    print(f"DEBUG: Bending residues groups: {bend_res_groups}")
     
     if bend_res_groups:
         commands.append("# Color bending residues")
@@ -633,10 +628,10 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
         fw.write(f"atoms to use: {atoms}\n")
         fw.write(f"THERE ARE {len(domains)} DOMAINS\n")
         fw.write("================================================================================\n")
-        domain_colours = ["blue", "red", "yellow", "pink", "cyan"]
+        domain_colours = ["blue", "red", "yellow", "pink", "cyan", "purple", "orange", "brown", "black", "white", "magenta", "violet", "indigo", "turquoise", "coral"]
         fixed_domain = domains[fixed_domain_id]
         fw.write("FIXED DOMAIN\n")
-        fw.write(f"DOMAIN NUMBER: \t {fixed_domain_id} (coloured {domain_colours[0]} for rasmol)\n")
+        fw.write(f"DOMAIN NUMBER: \t {fixed_domain_id + 1} (coloured {domain_colours[0]} for rasmol)\n")
         slide_window_indices = protein_1.slide_window_residues_indices
         util_res = protein_1.utilised_residues_indices
         polymer = protein_1.get_polymer()
@@ -669,7 +664,7 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
             if domain.domain_id != fixed_domain_id:
                 fw.write("------------------------------------------------------------------------------\n")
                 fw.write(f"MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR {domain_count}\n")
-                fw.write(f"DOMAIN NUMBER: \t {domain.domain_id} (coloured {domain_colours[domain_count]} for rasmol)\n")
+                fw.write(f"DOMAIN NUMBER: \t {domain.domain_id + 1} (coloured {domain_colours[domain_count]} for rasmol)\n")
                 slide_window_indices = protein_1.slide_window_residues_indices
                 util_res = protein_1.utilised_residues_indices
                 polymer = protein_1.get_polymer()
@@ -698,7 +693,7 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(domain.ratio, 3)}\n")
                 fw.write(f"ANGLE OF ROTATION: \t{round(domain.rot_angle, 3)} DEGREES\n")
                 fw.write(f"TRANSLATION ALONG AXIS:\t{round(domain.translation, 3)} A\n")
-                fw.write(f"SCREW AXIS: \t{round(domain.screw_axis[0], 3)} \t{round(domain.screw_axis[1], 3)} \t{round(domain.screw_axis[2], 3)}\n")
+                fw.write(f"SCREW AXIS DIRECTION: \t{round(domain.screw_axis[0], 3)} \t{round(domain.screw_axis[1], 3)} \t{round(domain.screw_axis[2], 3)}\n")
                 fw.write(f"POINT ON AXIS: \t{round(domain.point_on_axis[0], 3)} \t{round(domain.point_on_axis[1], 3)} \t{round(domain.point_on_axis[2], 3)}\n")
                 groups = group_continuous_regions(domain.bend_res)
                 for group in groups:

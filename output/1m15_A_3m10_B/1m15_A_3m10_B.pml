@@ -1,60 +1,149 @@
+# DynDom Complete Visualization
+# Domain-colored structure with screw axis arrows
 reinitialize
 load 1m15_A_3m10_B.pdb
 bg_color white
 color grey
-select region0, resi 2-95
-select region0, region0 + resi 124-152
-select region0, region0 + resi 162-168
-select region0, region0 + resi 190-206
-select region0, region0 + resi 217-227
-select region0, region0 + resi 256-274
-set_color colour0 = [0  ,0  ,255]
-color colour0, region0
-select region1, resi 97-124
-select region1, region1 + resi 155-159
-select region1, region1 + resi 160-162
-select region1, region1 + resi 211-212
-select region1, region1 + resi 230-250
-select region1, region1 + resi 254-256
-select region1, region1 + resi 276-311
-select region1, region1 + resi 321-354
-set_color colour1 = [255,0  ,0  ]
-color colour1, region1
-select region2, resi 171-180
-select region2, region2 + resi 210-211
-select region2, region2 + resi 212-214
-select region2, region2 + resi 215-217
-set_color colour2 = [255,255,0  ]
-color colour2, region2
-select region3, resi 95-97
-set_color colour3 = [0  ,255,0  ]
-color colour3, region3
-select region4, resi 152-155
-set_color colour4 = [0  ,255,0  ]
-color colour4, region4
-select region5, resi 161-162
-set_color colour5 = [0  ,255,0  ]
-color colour5, region5
-select region6, resi 227-230
-set_color colour6 = [0  ,255,0  ]
-color colour6, region6
-select region7, resi 252-256
-set_color colour7 = [0  ,255,0  ]
-color colour7, region7
-select region8, resi 274-276
-set_color colour8 = [0  ,255,0  ]
-color colour8, region8
-select region9, resi 168-171
-set_color colour9 = [0  ,255,0  ]
-color colour9, region9
-select region10, resi 182-190
-set_color colour10 = [0  ,255,0  ]
-color colour10, region10
-select region11, resi 206-210
-set_color colour11 = [0  ,255,0  ]
-color colour11, region11
-select region12, resi 216-217
-set_color colour12 = [0  ,255,0  ]
-color colour12, region12
+
+# === DOMAIN STRUCTURE COLORING ===
+select fixed_domain, resi 2-94
+select fixed_domain, fixed_domain + resi 125-151
+select fixed_domain, fixed_domain + resi 163-167
+select fixed_domain, fixed_domain + resi 190-205
+select fixed_domain, fixed_domain + resi 218-226
+select fixed_domain, fixed_domain + resi 257-273
+color blue, fixed_domain
+
+select moving_domain_1, resi 98-122
+select moving_domain_1, moving_domain_1 + resi 156-160
+select moving_domain_1, moving_domain_1 + resi 211-211
+select moving_domain_1, moving_domain_1 + resi 231-251
+select moving_domain_1, moving_domain_1 + resi 277-310
+select moving_domain_1, moving_domain_1 + resi 321-353
+color red, moving_domain_1
+
+select moving_domain_2, resi 172-181
+select moving_domain_2, moving_domain_2 + resi 212-215
+color yellow, moving_domain_2
+
+# Color bending residues
+select bending_residues_1, resi 95-97
+color green, bending_residues_1
+select bending_residues_2, resi 123-124
+color green, bending_residues_2
+select bending_residues_3, resi 152-155
+color green, bending_residues_3
+select bending_residues_4, resi 161-162
+color green, bending_residues_4
+select bending_residues_5, resi 227-230
+color green, bending_residues_5
+select bending_residues_6, resi 252-256
+color green, bending_residues_6
+select bending_residues_7, resi 274-276
+color green, bending_residues_7
+select bending_residues_8, resi 168-171
+color green, bending_residues_8
+select bending_residues_9, resi 182-189
+color green, bending_residues_9
+select bending_residues_10, resi 206-210
+color green, bending_residues_10
+select bending_residues_11, resi 216-217
+color green, bending_residues_11
+
 set dash_gap, 0
 set dash_radius, 0.2
+
+# === SCREW AXIS ARROWS ===
+load output
+load 1m15_A_3m10_B_arrows.pdb
+
+# Basic protein display
+hide everything, output
+show cartoon, output
+color gray80, output
+
+# Hide arrow atoms initially
+hide everything, 1m15_A_3m10_B_arrows
+
+# Arrow 1: Domain 1 (moving) relative to Domain 0 (fixed)
+# Shaft color: blue (fixed domain), Head color: red (moving domain)
+# Rotation: 20.4°
+
+# Select shaft and head atoms by chain and residue
+select shaft_1, chain A and resn SHF and resi 100
+select head_1, chain A and resn ARH and resi 120
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_1
+color blue, shaft_1
+set stick_radius, 0.3, shaft_1
+
+# Display arrow head as clean cone (MOVING domain color: red)
+show sticks, head_1
+color red, head_1
+set stick_radius, 0.25, head_1
+
+# Connect atoms ONLY within each section
+bond shaft_1, shaft_1
+bond head_1, head_1
+
+# Arrow 2: Domain 2 (moving) relative to Domain 0 (fixed)
+# Shaft color: blue (fixed domain), Head color: yellow (moving domain)
+# Rotation: 20.9°
+
+# Select shaft and head atoms by chain and residue
+select shaft_2, chain B and resn SHF and resi 150
+select head_2, chain B and resn ARH and resi 170
+
+# Display shaft as thick licorice stick (FIXED domain color: blue)
+show sticks, shaft_2
+color blue, shaft_2
+set stick_radius, 0.3, shaft_2
+
+# Display arrow head as clean cone (MOVING domain color: yellow)
+show sticks, head_2
+color yellow, head_2
+set stick_radius, 0.25, head_2
+
+# Connect atoms ONLY within each section
+bond shaft_2, shaft_2
+bond head_2, head_2
+
+# Disable automatic bonding between different chains
+set auto_bond, 0
+
+# Make arrows more prominent
+set stick_transparency, 0.0
+set stick_quality, 15
+set sphere_quality, 3
+set surface_quality, 2
+
+# Final settings
+set depth_cue, 0
+set ray_shadows, 1
+set ray_shadow_decay_factor, 0.1
+
+# Better lighting for 3D arrow heads
+set ambient, 0.2
+set direct, 0.8
+set reflect, 0.5
+set shininess, 10
+
+# Clean up selections
+delete shaft_*
+delete head_*
+
+# === FINAL SETTINGS ===
+set stick_transparency, 0.0
+set stick_quality, 15
+zoom all
+orient
+
+# Cleanup selections
+delete bending_residues
+delete arrow_*
+
+print 'DynDom complete visualization loaded!'
+print 'Fixed domain: 0 (blue)'
+print 'Moving domain 1: red, rotation 20.4°'
+print 'Moving domain 2: yellow, rotation 20.9°'

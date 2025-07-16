@@ -61,16 +61,13 @@ class Clusterer:
         clusters = {0: self.rotation_vectors}
         
         while self.current_k < self.max_k:
-            print("============================================\n")
-            print(f"current_k = {self.current_k}")
             centroids = self.calc_cluster_centroids(clusters)
             # KMeans the rotation vectors to obtain k number of clusters of rotation vectors
             self.k_means_results, clusters = self.calc_k_means(centroids)
-            # self.print_labels()
             # Obtain the segments from the KMeans labels.
             # The segments' indices are from the slide windowed residues. So the first and last few indices are not included.
             temp_segments, cluster_residues_small = self.determine_segments()
-            self.print_segments(temp_segments)
+
 
             # Prepare variables for logging
             temp_domains = None
@@ -79,7 +76,7 @@ class Clusterer:
             ratio_not_met = False
             decision = None
             reason = None
-
+            print(f'Window size: {self.window}, k: {self.current_k}, fails: {fails} ')
             # If there is a cluster where its total residue is smaller than min domain size:
             if cluster_residues_small and self.valid_domains_found:
                 # If there is a previous iteration where valid clusters and valid domain pair ratios are found, clustering
@@ -250,7 +247,7 @@ class Clusterer:
                         reason='Domain building failed - all domains too small after connectivity analysis'
                     )
                 continue
-                
+              
             # self.print_domains(temp_domains_1, current_k)
             # Check which domain has the most number of connecting domains. That is the fixed domain
             temp_fixed_domain_id = self.find_fixed_domain(temp_domains)
@@ -300,6 +297,7 @@ class Clusterer:
                 self.segments = temp_segments
                 self.valid_domains_found = True
                 self.valid_clusters = clusters
+                print(f"Valid domains found with k={self.current_k}, window={self.window}. ")
                 
                 # Log this successful attempt
                 if self.logger:
@@ -373,13 +371,6 @@ class Clusterer:
         # Calculate the new centroids
         centroids.append(np.average(below_avg_rot_vecs, axis=0))
         centroids.append(np.average(above_avg_rot_vecs, axis=0))
-
-        # print("Centroids", centroids)
-        # print("Dimensions:", dimension)
-        # print("Avg:", avg_dim_val)
-        # print("Below Avg:", below_avg_rot_vecs)
-        # print("Above Avg:", above_avg_rot_vecs)
-
         return centroids
 
     def calc_k_means(self, centroids="k-means++"):
@@ -441,12 +432,8 @@ class Clusterer:
         cluster_residues_too_little = False
         # Checks whether each cluster's total residues have minimum domain size. If a cluster is less than minimum
         # domain size, it means that the clustering will stop.
-        # print(f"Values {segment_indices.values()}")
         for indices in segment_indices.values():
-            # print(indices)
             num_residues = indices[:, 1] + 1 - indices[:, 0]
-            # print(f"Num res = {num_residues}")
-            # print(f"Sum = {sum(num_residues)}")
             if sum(num_residues) < 20:
                 cluster_residues_too_little = True
                 break
@@ -464,21 +451,6 @@ class Clusterer:
         if len(domains) <= 2:
             domain_sizes = [sum(d.segments[:, 1] + 1 - d.segments[:, 0]) for d in domains]
             chosen_domain = np.argmax(domain_sizes)
-            
-            print(f"\n=== FIXED DOMAIN SELECTION DEBUG ===")
-            print(f"Domain 0 size: {domain_sizes[0]} residues")
-            print(f"Domain 1 size: {domain_sizes[1]} residues") 
-            print(f"np.argmax returned: {chosen_domain}")
-            print(f"Domain {chosen_domain} will be FIXED (stationary)")
-            print(f"Domain {chosen_domain} = {'Blue' if chosen_domain == 0 else 'Red'} in PyMOL")
-            print(f"Expected: Larger domain ({max(domain_sizes)} residues) should be fixed")
-            
-            # Check domain segments for debugging
-            for i, domain in enumerate(domains):
-                print(f"Domain {i} segments: {domain.segments}")
-                print(f"Domain {i} calculated size: {domain_sizes[i]}")
-                print(f"Domain {i} stored num_residues: {domain.num_residues}")
-            
             return chosen_domain
         # Get the segments from each domain
         segments = [d.segments for d in domains]
@@ -505,12 +477,10 @@ class Clusterer:
         # Can there be multiple max connectivities?
         # https://datagy.io/python-get-dictionary-key-with-max-value/
         connectivity = {key: np.unique(value).size for key, value in connectivity.items()}
-        print(f"Connectivity {connectivity}")
         chosen_domain = max(connectivity, key=connectivity.get)
         return chosen_domain
 
     def mass_weighted_fit(self, dynamic_domain: Domain, fixed_domain: Domain):
-        print(f"Using mass weighted fit to move both domains...")
         """
         Performs a mass-weighted protein best fit on a domain pair to get a new set of coordinates of a domain pair.
         :param dynamic_domain: The domain connected to the fixed domain
@@ -611,7 +581,6 @@ class Clusterer:
 
         ratio = self.calc_ext_int_ratio(fixed_domain_ext_msf, fixed_domain_int_msf, fixed_domain_num_atoms,
                                         connected_domain_ext_msf, connected_domain_int_msf, domain_num_atoms)
-        print(f"Connected domains ({fixed_domain.domain_id} - {dynamic_domain.domain_id}) ratio = {ratio}")
         if ratio < self.ratio:
             print("Ratio below minimum criteria. Break.")
             return False
@@ -699,49 +668,4 @@ class Clusterer:
         sum_ints = (fixed_int/fixed_num_residues) + (dynamic_int / dynamic_num_residues)
         ratio = math.sqrt(sum_exts/sum_ints)
         return ratio
-
-    def print_labels(self):
-        print("Printing Labels...")
-        print(f"Length = {len(self.k_means_results.labels_)}")
-        curr_element = self.k_means_results.labels_[0]
-        list_of_same_labels = []
-        for i in range(len(self.k_means_results.labels_)):
-            if self.k_means_results.labels_[i] != curr_element:
-                print(list_of_same_labels)
-                list_of_same_labels = [self.k_means_results.labels_[i]]
-                curr_element = self.k_means_results.labels_[i]
-                continue
-            list_of_same_labels.append(self.k_means_results.labels_[i])
-        print(list_of_same_labels)
-
-    def print_segments(self, segments):
-        print("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
-        print("Printing segments...")
-        seg_count = 0
-        res_total = 0
-        total_small_segments = 0
-        for k, v in segments.items():
-            print(f"Cluster {k} : {len(v)} Segments")
-            print(f"Values {v}")
-            res_count = 0
-            seg_count += v.shape[0]
-            for i in v:
-                res_count += i[1] + 1 - i[0]
-                res_total += i[1] + 1 - i[0]
-            print(f"Segment Res = {res_count}")
-            if res_count < self.domain:
-                total_small_segments += 1
-        print("---------------------------------------")
-        print(f"Seg total = {seg_count}")
-        print(f"Res total = {res_total}")
-        print("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
-        return
-
-    def print_coords(self, transformed_1, transformed_2):
-        for i in range(len(transformed_1)):
-            for a in self.atoms_to_use:
-                print(f"==============================================")
-                print(f"P1 : {self.protein_1.slide_window_residues[i][a][0].pos} -> {transformed_1[i][a][0].pos}")
-                print(f"P2 : {self.protein_2.slide_window_residues[i][a][0].pos} -> {transformed_2[i][a][0].pos}")
-                print(f"==============================================")
 
