@@ -6,35 +6,49 @@ bg_color white
 color grey
 
 # === DOMAIN STRUCTURE COLORING ===
-select fixed_domain, resi 274-274
-select fixed_domain, fixed_domain + resi 281-305
+select fixed_domain, resi 6-6
+select fixed_domain, fixed_domain + resi 229-229
+select fixed_domain, fixed_domain + resi 231-231
+select fixed_domain, fixed_domain + resi 234-272
+select fixed_domain, fixed_domain + resi 276-279
 color blue, fixed_domain
 
-select moving_domain_0, resi 311-508
+select moving_domain_0, resi 311-507
 color red, moving_domain_0
 
-select moving_domain_1, resi 2-5
-select moving_domain_1, moving_domain_1 + resi 7-228
-select moving_domain_1, moving_domain_1 + resi 230-230
-select moving_domain_1, moving_domain_1 + resi 232-233
+select moving_domain_1, resi 3-4
+select moving_domain_1, moving_domain_1 + resi 8-227
 color yellow, moving_domain_1
 
-select moving_domain_3, resi 6-6
-select moving_domain_3, moving_domain_3 + resi 229-229
-select moving_domain_3, moving_domain_3 + resi 231-231
-select moving_domain_3, moving_domain_3 + resi 234-266
-select moving_domain_3, moving_domain_3 + resi 277-278
-color pink, moving_domain_3
+select moving_domain_2, resi 274-274
+select moving_domain_2, moving_domain_2 + resi 281-308
+color pink, moving_domain_2
 
 # Color bending residues
-select bending_residues_1, resi 306-310
+select bending_residues_1, resi 310-310
 color green, bending_residues_1
-select bending_residues_2, resi 267-273
+select bending_residues_2, resi 508-508
 color green, bending_residues_2
-select bending_residues_3, resi 275-276
+select bending_residues_3, resi 2-2
 color green, bending_residues_3
-select bending_residues_4, resi 279-280
+select bending_residues_4, resi 5-5
 color green, bending_residues_4
+select bending_residues_5, resi 7-7
+color green, bending_residues_5
+select bending_residues_6, resi 228-228
+color green, bending_residues_6
+select bending_residues_7, resi 230-230
+color green, bending_residues_7
+select bending_residues_8, resi 232-233
+color green, bending_residues_8
+select bending_residues_9, resi 273-273
+color green, bending_residues_9
+select bending_residues_10, resi 275-275
+color green, bending_residues_10
+select bending_residues_11, resi 280-280
+color green, bending_residues_11
+select bending_residues_12, resi 309-309
+color green, bending_residues_12
 
 set dash_gap, 0
 set dash_radius, 0.2
@@ -51,9 +65,9 @@ color gray80, output
 # Hide arrow atoms initially
 hide everything, 1yy9_a_epidermalgrowthfactor_A_1ivo_a_epidermalgrowthfactor_A_arrows
 
-# Arrow 1: Domain 0 (moving) relative to Domain 2 (fixed)
+# Arrow 1: Domain 0 (moving) relative to Domain 3 (fixed)
 # Shaft color: blue (fixed domain), Head color: red (moving domain)
-# Rotation: 116.3°
+# Rotation: 136.2°
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
@@ -73,9 +87,9 @@ set stick_radius, 0.25, head_1
 bond shaft_1, shaft_1
 bond head_1, head_1
 
-# Arrow 2: Domain 1 (moving) relative to Domain 2 (fixed)
+# Arrow 2: Domain 1 (moving) relative to Domain 3 (fixed)
 # Shaft color: blue (fixed domain), Head color: yellow (moving domain)
-# Rotation: 30.8°
+# Rotation: 138.9°
 
 # Select shaft and head atoms by chain and residue
 select shaft_2, chain B and resn SHF and resi 150
@@ -95,9 +109,9 @@ set stick_radius, 0.25, head_2
 bond shaft_2, shaft_2
 bond head_2, head_2
 
-# Arrow 3: Domain 3 (moving) relative to Domain 2 (fixed)
+# Arrow 3: Domain 2 (moving) relative to Domain 3 (fixed)
 # Shaft color: blue (fixed domain), Head color: pink (moving domain)
-# Rotation: 32.9°
+# Rotation: 124.3°
 
 # Select shaft and head atoms by chain and residue
 select shaft_3, chain C and resn SHF and resi 200
@@ -152,7 +166,7 @@ delete bending_residues
 delete arrow_*
 
 print 'DynDom complete visualization loaded!'
-print 'Fixed domain: 2 (blue)'
-print 'Moving domain 0: red, rotation 116.3°'
-print 'Moving domain 1: yellow, rotation 30.8°'
-print 'Moving domain 3: pink, rotation 32.9°'
+print 'Fixed domain: 3 (blue)'
+print 'Moving domain 0: red, rotation 136.2°'
+print 'Moving domain 1: yellow, rotation 138.9°'
+print 'Moving domain 2: pink, rotation 124.3°'

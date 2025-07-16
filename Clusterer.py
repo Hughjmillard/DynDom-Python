@@ -9,6 +9,7 @@ from sklearn.cluster import KMeans
 from itertools import groupby
 from operator import itemgetter
 from clustering_logger import ClusteringLogger
+from HierarchySystem import HierarchicalDomainSystem
 
 
 class Clusterer:
@@ -250,32 +251,32 @@ class Clusterer:
               
             # self.print_domains(temp_domains_1, current_k)
             # Check which domain has the most number of connecting domains. That is the fixed domain
-            temp_fixed_domain_id = self.find_fixed_domain(temp_domains)
+            # temp_fixed_domain_id = self.find_fixed_domain(temp_domains)
 
-            ratio_not_met = False
-            ratios = []
-            # For each dynamic domain, calculate the ratio of interdomain to intradomain motion
-            for domain in temp_domains:
-                # Ignore the fixed domain
-                if domain.domain_id == temp_fixed_domain_id:
-                    continue
-                # Perform a mass-weighted best fit using the dynamic and fixed domains
-                r, transformed_1_domains_on_2 = self.mass_weighted_fit(domain, temp_domains[temp_fixed_domain_id])
-                # Check the ratio of interdomain to intradomain motion
-                ratio_met = self.check_ratios(transformed_1_domains_on_2, domain, temp_domains[temp_fixed_domain_id])
-                ratios.append(domain.ratio)  # Store the calculated ratio
+            # ratio_not_met = False
+            # ratios = []
+            # # For each dynamic domain, calculate the ratio of interdomain to intradomain motion
+            # for domain in temp_domains:
+            #     # Ignore the fixed domain
+            #     if domain.domain_id == temp_fixed_domain_id:
+            #         continue
+            #     # Perform a mass-weighted best fit using the dynamic and fixed domains
+            #     r, transformed_1_domains_on_2 = self.mass_weighted_fit(domain, temp_domains[temp_fixed_domain_id])
+            #     # Check the ratio of interdomain to intradomain motion
+            #     ratio_met = self.check_ratios(transformed_1_domains_on_2, domain, temp_domains[temp_fixed_domain_id])
+            #     ratios.append(domain.ratio)  # Store the calculated ratio
                 
-                if not ratio_met:
-                    ratio_not_met = True
-                    print("Ratio not met")
-                    break
-                    
+            #     if not ratio_met:
+            #         ratio_not_met = True
+            #         print("Ratio not met")
+            #         break
+            ratio_not_met = not self.check_ratios_hierarchical(temp_domains)
+
             if ratio_not_met:
                 self.current_k += 1
                 
                 # Log this attempt
                 if self.logger:
-                    min_ratio = min(ratios) if ratios else 0
                     self.logger.log_k_attempt(
                         k=self.current_k - 1,
                         window_size=self.window,
@@ -283,25 +284,27 @@ class Clusterer:
                         cluster_segments=temp_segments,
                         cluster_residues_small=cluster_residues_small,
                         domain_build_failed=cluster_break,
-                        ratios=ratios,
+                        ratios=None,  # Could collect ratios from hierarchical analysis if needed
                         ratio_decision='fail',
                         decision='reject_ratios',
-                        reason=f'Ratio validation failed (min: {min_ratio:.3f}, threshold: {self.ratio})'
+                        reason='Hierarchical ratio validation failed'
                     )
                 continue
             else:
                 # The first time that a k value produces valid domains for all clusters, set it to true
                 self.valid_k = self.current_k
                 self.domains = temp_domains
-                self.fixed_domain = temp_fixed_domain_id
+                
+                # Store the hierarchical fixed domain (primary reference)
+                self.fixed_domain = self.get_hierarchical_fixed_domain()
+                
                 self.segments = temp_segments
                 self.valid_domains_found = True
                 self.valid_clusters = clusters
-                print(f"Valid domains found with k={self.current_k}, window={self.window}. ")
                 
                 # Log this successful attempt
                 if self.logger:
-                    avg_ratio = sum(ratios) / len(ratios) if ratios else 0
+                    avg_ratio = 0  # Could calculate from hierarchical analysis if needed
                     self.logger.log_k_attempt(
                         k=self.current_k,
                         window_size=self.window,
@@ -309,10 +312,10 @@ class Clusterer:
                         cluster_segments=temp_segments,
                         cluster_residues_small=cluster_residues_small,
                         domain_build_failed=cluster_break,
-                        ratios=ratios,
+                        ratios=None,  # Could collect ratios from hierarchical analysis if needed
                         ratio_decision='pass',
                         decision='accept',
-                        reason=f'All criteria met (avg ratio: {avg_ratio:.3f}, domains: {len(temp_domains)})'
+                        reason=f'Hierarchical analysis successful (domains: {len(temp_domains)})'
                     )
                     
             self.current_k += 1
@@ -669,3 +672,69 @@ class Clusterer:
         ratio = math.sqrt(sum_exts/sum_ints)
         return ratio
 
+    def check_ratios_hierarchical(self, temp_domains):
+        """
+        Check ratios using hierarchical domain reference system
+        Replace the existing single-fixed-domain ratio checking
+        """
+        # Create hierarchical system for this set of domains
+        hierarchy_system = HierarchicalDomainSystem(temp_domains)
+        analysis_pairs = hierarchy_system.get_analysis_pairs()
+        
+        if not analysis_pairs:
+            print("No analysis pairs found - single domain or no connections")
+            return True  # Single domain case
+        
+        # Print the analysis plan for debugging
+        print("\n=== HIERARCHICAL ANALYSIS PLAN ===")
+        hierarchy_system.print_analysis_plan()
+        
+        all_ratios_met = True
+        ratios = []
+        
+        for moving_domain_id, reference_domain_id in analysis_pairs:
+            moving_domain = temp_domains[moving_domain_id]
+            reference_domain = temp_domains[reference_domain_id]
+            
+            print(f"\nAnalyzing Domain {moving_domain_id} relative to Domain {reference_domain_id}")
+            
+            # Perform mass-weighted fit between specific domain pair
+            r, transformed_slide_window = self.mass_weighted_fit(moving_domain, reference_domain)
+            
+            # Check ratios for this specific pair
+            ratio_met = self.check_ratios(transformed_slide_window, moving_domain, reference_domain)
+            
+            if not ratio_met:
+                print(f"Ratio not met for Domain {moving_domain_id} relative to Domain {reference_domain_id}")
+                all_ratios_met = False
+                break
+            else:
+                print(f"Ratio satisfied: {moving_domain.ratio:.3f}")
+                ratios.append(moving_domain.ratio)
+        
+        # Store the hierarchy system for later use
+        if all_ratios_met:
+            self.hierarchy_system = hierarchy_system
+            self.analysis_pairs = analysis_pairs
+        
+        return all_ratios_met
+
+    def get_hierarchical_fixed_domain(self):
+        """
+        Get the global reference domain from hierarchy (first in hierarchy)
+        This replaces the single fixed domain for global operations
+        """
+        if hasattr(self, 'hierarchy_system') and self.hierarchy_system:
+            return self.hierarchy_system.domain_hierarchy[0]
+        else:
+            # Fallback to original method
+            return self.find_fixed_domain(self.domains)
+
+    def print_hierarchical_analysis(self):
+        """
+        Print the hierarchical analysis plan
+        """
+        if hasattr(self, 'hierarchy_system') and self.hierarchy_system:
+            self.hierarchy_system.print_analysis_plan()
+        else:
+            print("No hierarchical system available")
