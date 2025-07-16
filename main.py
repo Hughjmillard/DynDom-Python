@@ -135,7 +135,8 @@ class Engine:
                 traceback.print_exc()
             FileMngr.write_w5_info_file(self.output_path, self.protein_1.name, self.protein_1.chain_param,
                                         self.protein_2.name, self.protein_2.chain_param, self.window, self.domain,
-                                        self.ratio, self.atoms_to_use, self.clusterer.domains, self.clusterer.fixed_domain,
+                                        self.ratio, self.atoms_to_use, self.clusterer.domains,
+                                        self.clusterer.analysis_pairs,self.clusterer.get_hierarchical_fixed_domain(),
                                         self.protein_1)
             running = False
             print(f'\nrmsd of whole protein best fit: {self.chain_superimpose_result.rmsd:.3f}A\n')

@@ -612,7 +612,12 @@ def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_pa
     return commands
 
 def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name: str, chain_2, window, domain_size, ratio, atoms,
-                       domains: list, fixed_domain_id: int, protein_1):
+                       domains: list, analysis_pairs: list, global_reference_id: int, protein_1):
+    """
+    Write w5_info file with hierarchical domain structure
+    analysis_pairs: list of (moving_domain_id, reference_domain_id) tuples
+    global_reference_id: ID of the global reference domain
+    """
     try:
         protein_folder = f"{protein_1_name}_{chain_1}_{protein_2_name}_{chain_2}"
         fw = open(f"{output_path}/{protein_folder}/{protein_folder}.w5_info", "w")
@@ -628,95 +633,151 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
         fw.write(f"atoms to use: {atoms}\n")
         fw.write(f"THERE ARE {len(domains)} DOMAINS\n")
         fw.write("================================================================================\n")
+        
         domain_colours = ["blue", "red", "yellow", "pink", "cyan", "purple", "orange", "brown", "black", "white", "magenta", "violet", "indigo", "turquoise", "coral"]
-        fixed_domain = domains[fixed_domain_id]
-        fw.write("FIXED DOMAIN\n")
-        fw.write(f"DOMAIN NUMBER: \t {fixed_domain_id + 1} (coloured {domain_colours[0]} for rasmol)\n")
-        slide_window_indices = protein_1.slide_window_residues_indices
-        util_res = protein_1.utilised_residues_indices
-        polymer = protein_1.get_polymer()
-
-        residue_str = ""
-        for s in range(fixed_domain.segments.shape[0]):
-            # Convert sequence indices to PDB residue numbers
-            start_seq_idx = fixed_domain.segments[s][0]
-            end_seq_idx = fixed_domain.segments[s][1]
-            
-            start_util_pos = slide_window_indices[0] + start_seq_idx
-            end_util_pos = slide_window_indices[0] + end_seq_idx
-            
-            start_polymer_idx = util_res[start_util_pos]
-            end_polymer_idx = util_res[end_util_pos]
-            
-            start_pdb_num = polymer[start_polymer_idx].seqid.num
-            end_pdb_num = polymer[end_polymer_idx].seqid.num
-            
-            if s == 0:
-                residue_str = f"{start_pdb_num} - {end_pdb_num}"
-            else:
-                residue_str = residue_str + f", {start_pdb_num} - {end_pdb_num}"
+        
+        # Write global reference domain
+        global_ref_domain = domains[global_reference_id]
+        fw.write("GLOBAL REFERENCE DOMAIN\n")
+        fw.write(f"DOMAIN NUMBER: \t {global_reference_id + 1} (coloured {domain_colours[0]} for rasmol)\n")
+        
+        # Write domain residue ranges
+        residue_str = _format_domain_residues(global_ref_domain, protein_1)
         fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
-        fw.write(f"SIZE: \t{fixed_domain.num_residues}\n")
-        fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(fixed_domain.rmsd, 3)}A\n")
-
-        domain_count = 1
-        for domain in domains:
-            if domain.domain_id != fixed_domain_id:
-                fw.write("------------------------------------------------------------------------------\n")
-                fw.write(f"MOVING DOMAIN (RELATIVE TO FIXED DOMAIN),  PAIR {domain_count}\n")
-                fw.write(f"DOMAIN NUMBER: \t {domain.domain_id + 1} (coloured {domain_colours[domain_count]} for rasmol)\n")
-                slide_window_indices = protein_1.slide_window_residues_indices
-                util_res = protein_1.utilised_residues_indices
-                polymer = protein_1.get_polymer()
-                residue_str = ""
-                for s in range(domain.segments.shape[0]):  # CHANGED: domain.segments instead of fixed_domain.segments
-                    # Convert sequence indices to PDB residue numbers
-                    start_seq_idx = domain.segments[s][0]  # CHANGED: domain.segments
-                    end_seq_idx = domain.segments[s][1]    # CHANGED: domain.segments
+        fw.write(f"SIZE: \t{global_ref_domain.num_residues}\n")
+        fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(global_ref_domain.rmsd, 3)}A\n")
+        
+        # Group analysis pairs by reference domain
+        reference_groups = {}
+        for moving_id, reference_id in analysis_pairs:
+            if reference_id not in reference_groups:
+                reference_groups[reference_id] = []
+            reference_groups[reference_id].append(moving_id)
+        
+        # Write analysis pairs grouped by reference domain
+        pair_count = 1
+        for reference_id in sorted(reference_groups.keys()):
+            reference_domain = domains[reference_id]
+            moving_domain_ids = reference_groups[reference_id]
+            
+            fw.write("------------------------------------------------------------------------------\n")
+            
+            if reference_id == global_reference_id:
+                fw.write(f"DOMAINS ANALYZED RELATIVE TO GLOBAL REFERENCE (Domain {reference_id + 1})\n")
+            else:
+                fw.write(f"DOMAINS ANALYZED RELATIVE TO Domain {reference_id + 1}\n")
+                # Write reference domain info if it's not the global reference
+                fw.write(f"REFERENCE DOMAIN NUMBER: \t {reference_id + 1} (coloured {domain_colours[_get_domain_color_index(reference_id, global_reference_id)]} for rasmol)\n")
+                ref_residue_str = _format_domain_residues(reference_domain, protein_1)
+                fw.write(f"REFERENCE RESIDUE NUMBERS: \t{ref_residue_str}\n")
+                fw.write(f"REFERENCE SIZE: \t{reference_domain.num_residues}\n")
+                fw.write("---\n")
+            
+            # Write each moving domain for this reference
+            for moving_id in moving_domain_ids:
+                moving_domain = domains[moving_id]
+                color_index = _get_domain_color_index(moving_id, global_reference_id)
                 
-                    start_util_pos = slide_window_indices[0] + start_seq_idx
-                    end_util_pos = slide_window_indices[0] + end_seq_idx
+                fw.write(f"MOVING DOMAIN (RELATIVE TO Domain {reference_id + 1}), PAIR {pair_count}\n")
+                fw.write(f"DOMAIN NUMBER: \t {moving_id + 1} (coloured {domain_colours[color_index]} for rasmol)\n")
                 
-                    start_polymer_idx = util_res[start_util_pos]
-                    end_polymer_idx = util_res[end_util_pos]
-                
-                    start_pdb_num = polymer[start_polymer_idx].seqid.num
-                    end_pdb_num = polymer[end_polymer_idx].seqid.num
-                
-                    if s == 0:
-                        residue_str = f"{start_pdb_num} - {end_pdb_num}"
-                    else:
-                        residue_str = residue_str + f", {start_pdb_num} - {end_pdb_num}"
+                # Write domain residue ranges
+                residue_str = _format_domain_residues(moving_domain, protein_1)
                 fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
-                fw.write(f"SIZE: \t{domain.num_residues}\n")
-                fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(domain.rmsd, 3)}A\n")
-                fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(domain.ratio, 3)}\n")
-                fw.write(f"ANGLE OF ROTATION: \t{round(domain.rot_angle, 3)} DEGREES\n")
-                fw.write(f"TRANSLATION ALONG AXIS:\t{round(domain.translation, 3)} A\n")
-                fw.write(f"SCREW AXIS DIRECTION: \t{round(domain.screw_axis[0], 3)} \t{round(domain.screw_axis[1], 3)} \t{round(domain.screw_axis[2], 3)}\n")
-                fw.write(f"POINT ON AXIS: \t{round(domain.point_on_axis[0], 3)} \t{round(domain.point_on_axis[1], 3)} \t{round(domain.point_on_axis[2], 3)}\n")
-                groups = group_continuous_regions(domain.bend_res)
-                for group in groups:
-                    # Convert bending residue sequence indices to PDB residue numbers
-                    start_seq_idx = group[0]
-                    end_seq_idx = group[-1]
-                    
-                    start_util_pos = slide_window_indices[0] + start_seq_idx
-                    end_util_pos = slide_window_indices[0] + end_seq_idx
-                    
-                    start_polymer_idx = util_res[start_util_pos]
-                    end_polymer_idx = util_res[end_util_pos]
-                    
-                    start_pdb_num = polymer[start_polymer_idx].seqid.num
-                    end_pdb_num = polymer[end_polymer_idx].seqid.num
-                    
-                    fw.write(f"BENDING RESIDUES: \t{start_pdb_num} - {end_pdb_num}\n")
-                domain_count += 1
-
+                fw.write(f"SIZE: \t{moving_domain.num_residues}\n")
+                fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(moving_domain.rmsd, 3)}A\n")
+                
+                # Write motion parameters
+                fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(moving_domain.ratio, 3)}\n")
+                fw.write(f"ANGLE OF ROTATION: \t{round(moving_domain.rot_angle, 3)} DEGREES\n")
+                fw.write(f"TRANSLATION ALONG AXIS:\t{round(moving_domain.translation, 3)} A\n")
+                fw.write(f"SCREW AXIS DIRECTION: \t{round(moving_domain.screw_axis[0], 3)} \t{round(moving_domain.screw_axis[1], 3)} \t{round(moving_domain.screw_axis[2], 3)}\n")
+                fw.write(f"POINT ON AXIS: \t{round(moving_domain.point_on_axis[0], 3)} \t{round(moving_domain.point_on_axis[1], 3)} \t{round(moving_domain.point_on_axis[2], 3)}\n")
+                
+                # Write bending residues
+                if hasattr(moving_domain, 'bend_res') and moving_domain.bend_res:
+                    groups = group_continuous_regions(moving_domain.bend_res)
+                    for group in groups:
+                        start_pdb_num, end_pdb_num = _convert_bend_res_to_pdb_nums(group, protein_1)
+                        fw.write(f"BENDING RESIDUES: \t{start_pdb_num} - {end_pdb_num}\n")
+                
+                fw.write("---\n")
+                pair_count += 1
+        
+        # Write summary of hierarchical structure
+        fw.write("------------------------------------------------------------------------------\n")
+        fw.write("HIERARCHICAL ANALYSIS STRUCTURE:\n")
+        fw.write(f"Global Reference: Domain {global_reference_id + 1}\n")
+        for moving_id, reference_id in analysis_pairs:
+            fw.write(f"  Domain {moving_id + 1} -> analyzed relative to Domain {reference_id + 1}\n")
+        
+        fw.close()
+        
     except Exception as e:
-        print(e)
+        print(f"Error writing w5_info file: {e}")
+        traceback.print_exc()
         return False
     return True
+
+
+def _format_domain_residues(domain, protein_1):
+    """Helper function to format domain residue numbers for output"""
+    slide_window_indices = protein_1.slide_window_residues_indices
+    util_res = protein_1.utilised_residues_indices
+    polymer = protein_1.get_polymer()
+    
+    residue_str = ""
+    for s in range(domain.segments.shape[0]):
+        # Convert sequence indices to PDB residue numbers
+        start_seq_idx = domain.segments[s][0]
+        end_seq_idx = domain.segments[s][1]
+        
+        start_util_pos = slide_window_indices[0] + start_seq_idx
+        end_util_pos = slide_window_indices[0] + end_seq_idx
+        
+        start_polymer_idx = util_res[start_util_pos]
+        end_polymer_idx = util_res[end_util_pos]
+        
+        start_pdb_num = polymer[start_polymer_idx].seqid.num
+        end_pdb_num = polymer[end_polymer_idx].seqid.num
+        
+        if s == 0:
+            residue_str = f"{start_pdb_num} - {end_pdb_num}"
+        else:
+            residue_str = residue_str + f", {start_pdb_num} - {end_pdb_num}"
+    
+    return residue_str
+
+
+def _get_domain_color_index(domain_id, global_reference_id):
+    """Get color index for domain based on hierarchical structure"""
+    if domain_id == global_reference_id:
+        return 0  # Global reference always gets blue (index 0)
+    
+    # For non-reference domains, assign colors sequentially
+    # This is a simplified approach - you might want to make this more sophisticated
+    return (domain_id + 1) % 15  # Cycle through available colors
+
+
+def _convert_bend_res_to_pdb_nums(bend_res_group, protein_1):
+    """Convert bending residue sequence indices to PDB residue numbers"""
+    slide_window_indices = protein_1.slide_window_residues_indices
+    util_res = protein_1.utilised_residues_indices
+    polymer = protein_1.get_polymer()
+    
+    start_seq_idx = bend_res_group[0]
+    end_seq_idx = bend_res_group[-1]
+    
+    start_util_pos = slide_window_indices[0] + start_seq_idx
+    end_util_pos = slide_window_indices[0] + end_seq_idx
+    
+    start_polymer_idx = util_res[start_util_pos]
+    end_polymer_idx = util_res[end_util_pos]
+    
+    start_pdb_num = polymer[start_polymer_idx].seqid.num
+    end_pdb_num = polymer[end_polymer_idx].seqid.num
+    
+    return start_pdb_num, end_pdb_num
 
 
 def group_continuous_regions(data: list):
