@@ -257,6 +257,7 @@ def _create_arrow_atoms_hierarchical_with_data(screw_axis, point_on_axis, rot_an
     """
     Create PDB atom lines for an arrow using provided screw axis data
     """
+    print(f"Arrow {arrow_index}: Point on axis: {point_on_axis}, Screw axis: {screw_axis}")
     # Normalize the screw axis
     screw_axis = screw_axis / np.linalg.norm(screw_axis)
     
@@ -282,6 +283,9 @@ def _create_arrow_atoms_hierarchical_with_data(screw_axis, point_on_axis, rot_an
     for i in range(n_shaft_atoms):
         t = -(base_shaft_length/2 + shaft_extension) + i * shaft_spacing
         pos = point_on_axis + t * screw_axis
+        # Debug prints - add these lines
+        if i < 3:  # Only print first 3 positions
+            print(f"  Shaft atom {i}: t={t:.3f}, pos=({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
         
         pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
         pdb_lines.append(pdb_line)

@@ -1,0 +1,26 @@
+DynDom Clustering Log - 1yy9_a_section_A_1ivo_a_section_A
+Started: 2025-07-17 16:25:49
+============================================================
+
+Window 5, K=2 - 16:25:49
+  Clusters: 2 (sizes: [26, 199])
+  Min cluster size: 26
+  PASS: All checks passed
+  Domains: 2 (sizes: [26, 199])
+  Reason: Hierarchical analysis successful (domains: 2)
+
+Window 5, K=3 - 16:25:49
+  Clusters: 3 (sizes: [199, 7, 19])
+  Min cluster size: 7
+  FAIL: Cluster too small (< 20 residues)
+  Reason: Cluster too small but previous valid solution exists (k=2)
+
+============================================================
+FINAL RESULT
+Time: 2025-07-17 16:25:49
+Final K: 2
+Final window: 5
+Status: 0
+Number of domains: 2
+Domain sizes: [26, 199]
+============================================================

@@ -111,6 +111,7 @@ class Engine:
             
             # self.determine_bending_residues()
             self.determine_bending_residues_hierarchical()
+            
 
             FileMngr.write_final_output_pdb(
                 self.output_path,
@@ -1077,12 +1078,13 @@ class Engine:
         print(f"Superposition RMSD: {rmsd:.6f}A")
         
         # Transform the domain
-        transformed_protein_1_domain_polymer.transform_pos_and_adp(r.transform)
+        transformed_protein_1_domain_polymer.transform_pos_and_adp(r.transform) #CHECK ME
         
         # Calculate screw axis parameters using the same logic as original method
         rot_vec = Rotation.from_matrix(np.asarray(r.transform.mat.tolist())).as_rotvec(degrees=True)
         unit_rot_vec = rot_vec / max(math.sqrt(np.sum(rot_vec**2)), 1e-10)
         rot_angle = np.linalg.norm(rot_vec)
+
         
         # Calculate displacement using saved coordinates
         transformed_coords = []
@@ -1092,7 +1094,7 @@ class Engine:
                 transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.y,
                 transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.z
             ]))
-        
+                
         if len(original_coords_backup) > 0 and len(transformed_coords) > 0:
             # Calculate displacement using the exact same logic as original method
             original_atom_coords = np.mean(original_coords_backup, axis=0)
@@ -1104,12 +1106,20 @@ class Engine:
             rotational_part = disp_vec - parallel_translation
             rotation_amplitude = max(math.sqrt(np.sum(rotational_part**2)), 1e-10)
             unit_rotational_part = rotational_part / rotation_amplitude
-            
             # Calculate point on axis using the same logic as original
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec)
             h_tan = 2 * math.tan(0.5 * rot_angle)  # rot_angle is already in degrees
             atoms_to_axis_direction = (rotation_amplitude * cross_prod_axis) / h_tan
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
+            print(f"\n=== COORDINATE SYSTEM CHECK ===")
+            print(f"Reference domain ID: {reference_domain.domain_id}")
+            print(f"original_atom_coords: {original_atom_coords}")
+            print(f"transformed_atom_coords: {transformed_atom_coords}")
+            print(f"disp_vec: {disp_vec}")
+            print(f"parallel_translation: {parallel_translation}")
+            print(f"rotational_part: {rotational_part}")
+            print(f"Point calculated from original_atom_coords: {original_atom_coords}")
+            print(f"Point calculated from transformed_atom_coords: {transformed_atom_coords}")
             
             print(f"Final results:")
             print(f"  Rotation angle: {rot_angle:.6f} degrees")
