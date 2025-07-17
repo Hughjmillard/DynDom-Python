@@ -181,51 +181,162 @@ def write_final_output_pdb(output_path, protein_1, fitted_protein_2, fitted_prot
         traceback.print_exc()
         print(e)
 
-def write_arrows_pdb(output_path, base_name, domains, fixed_domain_id, protein_1):
+def write_arrows_pdb(output_path, base_name, analysis_pairs, domains, protein_1, pair_specific_results=None):
     """
-    Generate arrows PDB file using domain data directly from memory
-    No need to read w5_info file - we already have all the data!
+    Generate arrows PDB file using hierarchical analysis pairs
+    FIXED: Use pair-specific screw axis results instead of domain objects
     """
     arrow_pdb_path = f"{output_path}/{base_name}_arrows.pdb"
     
     try:
-        # Get moving domains (exclude fixed domain)
-        moving_domains = [d for d in domains if d.domain_id != fixed_domain_id]
-        
-        if not moving_domains:
-            print("No moving domains found - no arrows to generate")
+        if not analysis_pairs:
+            print("No analysis pairs found - no arrows to generate")
             return None
             
         # Read protein coordinates for proper arrow scaling
         protein_coordinates = _read_protein_coordinates(f"{output_path}/{base_name}.pdb")
         
         with open(arrow_pdb_path, 'w') as f:
-            f.write("REMARK DynDom Arrow Visualization\n")
-            f.write("REMARK Shaft atoms = SHF residues\n")
-            f.write("REMARK Head atoms = ARH residues\n")
+            f.write("REMARK DynDom Hierarchical Arrow Visualization\n")
+            f.write("REMARK Shaft atoms = SHF residues (reference domain color)\n")
+            f.write("REMARK Head atoms = ARH residues (moving domain color)\n")
             f.write("REMARK Each arrow uses separate chain ID (A, B, C...)\n")
-            f.write("REMARK Generated directly from domain analysis\n")
+            f.write("REMARK Generated from hierarchical analysis pairs\n")
             
             atom_id = 1000
-            for i, domain in enumerate(moving_domains):
-                f.write(f"REMARK Arrow {i+1}: Domain {domain.domain_id} moving relative to fixed domain {fixed_domain_id}\n")
-                f.write(f"REMARK   Chain {chr(ord('A') + i)}: Rotation angle: {domain.rot_angle:.1f} degrees\n")
+            arrow_index = 0
+            
+            for moving_domain_id, reference_domain_id in analysis_pairs:
+                moving_domain = domains[moving_domain_id]
+                reference_domain = domains[reference_domain_id]
                 
-                # Generate arrow atoms using domain data directly
-                arrow_atoms = _create_arrow_atoms(domain, i, atom_id, protein_coordinates)
+                # CRITICAL FIX: Use pair-specific results instead of domain object
+                if pair_specific_results:
+                    pair_key = (moving_domain_id, reference_domain_id)
+                    if pair_key in pair_specific_results:
+                        pair_results = pair_specific_results[pair_key]
+                        rot_angle = pair_results['rot_angle']
+                        screw_axis = pair_results['screw_axis']
+                        point_on_axis = pair_results['point_on_axis']
+                    else:
+                        print(f"Warning: No pair-specific results for ({moving_domain_id}, {reference_domain_id})")
+                        rot_angle = moving_domain.rot_angle
+                        screw_axis = moving_domain.screw_axis
+                        point_on_axis = moving_domain.point_on_axis
+                else:
+                    # Fallback to domain object
+                    rot_angle = moving_domain.rot_angle
+                    screw_axis = moving_domain.screw_axis
+                    point_on_axis = moving_domain.point_on_axis
+                
+                f.write(f"REMARK Arrow {arrow_index+1}: Domain {moving_domain_id} moving relative to Domain {reference_domain_id}\n")
+                f.write(f"REMARK   Chain {chr(ord('A') + arrow_index)}: Rotation angle: {rot_angle:.1f} degrees\n")
+                
+                # Generate arrow atoms using pair-specific data
+                arrow_atoms = _create_arrow_atoms_hierarchical_with_data(
+                    screw_axis, point_on_axis, rot_angle, arrow_index, atom_id, protein_coordinates
+                )
                 f.write('\n'.join(arrow_atoms))
                 f.write('\n')
+                
                 atom_id += 200  # Large gap between arrows
+                arrow_index += 1
                 
             f.write("END\n")
             
-        print(f"Arrow PDB created: {arrow_pdb_path}")
+        print(f"Hierarchical arrow PDB created: {arrow_pdb_path}")
         return arrow_pdb_path
         
     except Exception as e:
         print(f"Error creating arrow PDB: {e}")
         traceback.print_exc()
         return None
+    
+    
+def _create_arrow_atoms_hierarchical_with_data(screw_axis, point_on_axis, rot_angle, arrow_index, start_atom_id, protein_coordinates):
+    """
+    Create PDB atom lines for an arrow using provided screw axis data
+    """
+    # Normalize the screw axis
+    screw_axis = screw_axis / np.linalg.norm(screw_axis)
+    
+    # Calculate appropriate arrow length
+    base_shaft_length = _calculate_arrow_length(screw_axis, point_on_axis, protein_coordinates)
+    head_length = 3.0
+    
+    # Extend shaft backwards by 10%
+    shaft_extension = base_shaft_length * 0.1
+    total_shaft_length = base_shaft_length + shaft_extension
+    shaft_spacing = 1.0
+    
+    pdb_lines = []
+    atom_id = start_atom_id
+    
+    # Use different chain/residue IDs for each arrow
+    shaft_res_id = 100 + arrow_index * 50
+    head_res_id = shaft_res_id + 20
+    chain_id = chr(ord('A') + arrow_index)
+    
+    # === CREATE SHAFT ===
+    n_shaft_atoms = int(total_shaft_length / shaft_spacing)
+    for i in range(n_shaft_atoms):
+        t = -(base_shaft_length/2 + shaft_extension) + i * shaft_spacing
+        pos = point_on_axis + t * screw_axis
+        
+        pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
+        pdb_lines.append(pdb_line)
+        atom_id += 1
+        
+    pdb_lines.append("TER")
+    
+    # === CREATE ARROW HEAD ===
+    # Create perpendicular vectors for cone base
+    if abs(screw_axis[0]) < 0.9:
+        temp_vec = np.array([1.0, 0.0, 0.0])
+    else:
+        temp_vec = np.array([0.0, 1.0, 0.0])
+    
+    perp1 = np.cross(screw_axis, temp_vec)
+    perp1 = perp1 / np.linalg.norm(perp1)
+    perp2 = np.cross(screw_axis, perp1)
+    perp2 = perp2 / np.linalg.norm(perp2)
+    
+    # Arrow head overlaps with shaft end
+    head_overlap = 2.0
+    head_start_pos = point_on_axis + (base_shaft_length/2 - head_overlap) * screw_axis
+    
+    # Create cone structure
+    n_layers = 4
+    n_points_per_layer = 6
+    
+    for layer in range(n_layers + 1):
+        layer_progress = layer / n_layers
+        layer_pos = head_start_pos + layer_progress * head_length * screw_axis
+        
+        max_radius = 1.2
+        layer_radius = max_radius * (1.0 - layer_progress) ** 1.5
+        
+        if layer == n_layers:
+            # Tip of arrow
+            pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {layer_pos[0]:8.3f}{layer_pos[1]:8.3f}{layer_pos[2]:8.3f}  1.00 50.00           C"
+            pdb_lines.append(pdb_line)
+            atom_id += 1
+        else:
+            # Circular layer
+            for point in range(n_points_per_layer):
+                angle = 2 * np.pi * point / n_points_per_layer
+                
+                circle_pos = (layer_pos + 
+                             layer_radius * np.cos(angle) * perp1 + 
+                             layer_radius * np.sin(angle) * perp2)
+                
+                pdb_line = f"ATOM  {atom_id:5d}  CA  ARH {chain_id}{head_res_id:4d}    {circle_pos[0]:8.3f}{circle_pos[1]:8.3f}{circle_pos[2]:8.3f}  1.00 40.00           C"
+                pdb_lines.append(pdb_line)
+                atom_id += 1
+    
+    pdb_lines.append("TER")
+    return pdb_lines
+
 
 def _read_protein_coordinates(pdb_file):
     """Read protein coordinates for arrow scaling"""
@@ -357,10 +468,11 @@ def _create_arrow_atoms(domain, arrow_index, start_atom_id, protein_coordinates)
     return pdb_lines
 
 def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_2_chain, 
-                              domains, fixed_domain_id, bending_residues, window_size):
+                              domains, analysis_pairs, global_reference_id, bending_residues, window_size,
+                              pair_specific_results=None):
     """
-    Generate single PyMOL script with both structure coloring and arrows
-    Uses domain data directly from memory - no file I/O roundtrip needed!
+    Generate single PyMOL script with hierarchical structure coloring and arrows
+    Uses hierarchical analysis pairs instead of single fixed domain
     """
     
     folder_name = f"{protein_1.name}_{protein_1.chain_param}_{protein_2_name}_{protein_2_chain}"
@@ -369,8 +481,8 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
     if not dir_path.exists():
         dir_path.mkdir(parents=True)
     
-    # Generate arrow PDB using domain data directly
-    arrow_pdb_path = write_arrows_pdb(dir_path_str, folder_name, domains, fixed_domain_id, protein_1)
+    # Generate arrow PDB using hierarchical analysis pairs
+    arrow_pdb_path = write_arrows_pdb(dir_path_str, folder_name, analysis_pairs, domains, protein_1, pair_specific_results)
     
     # Generate combined PyMOL script
     pml_file = f"{dir_path_str}/{folder_name}.pml"
@@ -378,8 +490,8 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
     try:
         with open(pml_file, 'w') as fw:
             # === HEADER ===
-            fw.write("# DynDom Complete Visualization\n")
-            fw.write("# Domain-colored structure with screw axis arrows\n")
+            fw.write("# DynDom Hierarchical Visualization\n")
+            fw.write("# Domain-colored structure with hierarchical screw axis arrows\n")
             fw.write("reinitialize\n")
             fw.write(f"load {folder_name}.pdb\n")
             fw.write("bg_color white\n")
@@ -387,15 +499,16 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
             fw.write("\n")
             
             # === STRUCTURE DOMAIN COLORING ===
-            structure_commands = _generate_structure_coloring_commands(
-                protein_1, domains, fixed_domain_id, bending_residues, window_size)
+            structure_commands = _generate_structure_coloring_commands_hierarchical(
+                protein_1, domains, global_reference_id, bending_residues, window_size)
             fw.write('\n'.join(structure_commands))
             fw.write("\n")
             
             # === ARROW VISUALIZATION ===
             if arrow_pdb_path:
                 arrow_pdb_name = os.path.basename(arrow_pdb_path)
-                arrow_commands = _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_path)
+                arrow_commands = _generate_arrow_commands_hierarchical(
+                    analysis_pairs, domains, global_reference_id, arrow_pdb_name, output_path)
                 fw.write('\n'.join(arrow_commands))
                 fw.write("\n")
             
@@ -413,28 +526,183 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
             fw.write("delete arrow_*\n")
             fw.write("\n")
             
-            # Status messages
-            fw.write("print 'DynDom complete visualization loaded!'\n")
-            fw.write(f"print 'Fixed domain: {fixed_domain_id} ({DOMAIN_COLORS[0]})'\n")
+            # Status messages for hierarchical system
+            fw.write("print 'DynDom hierarchical visualization loaded!'\n")
+            fw.write(f"print 'Global reference domain: {global_reference_id} ({DOMAIN_COLORS[0]})'\n")
             
-            moving_count = 0
-            for domain in domains:
-                if domain.domain_id != fixed_domain_id:
-                    color_index = 1 + moving_count
-                    if color_index < len(DOMAIN_COLORS):
-                        color = DOMAIN_COLORS[color_index]
-                    else:
-                        color = DOMAIN_COLORS[color_index % len(DOMAIN_COLORS)]
-                    fw.write(f"print 'Moving domain {domain.domain_id}: {color}, rotation {domain.rot_angle:.1f}°'\n")
-                    moving_count += 1
+            # Show analysis pairs
+            for i, (moving_id, ref_id) in enumerate(analysis_pairs):
+                moving_domain = domains[moving_id]
+                ref_color = _get_hierarchical_domain_color_index(ref_id, global_reference_id)
+                moving_color = _get_hierarchical_domain_color_index(moving_id, global_reference_id)
+                fw.write(f"print 'Analysis pair {i+1}: Domain {moving_id} ({DOMAIN_COLORS[moving_color]}) relative to Domain {ref_id} ({DOMAIN_COLORS[ref_color]})'\n")
+                fw.write(f"print '  Rotation: {moving_domain.rot_angle:.1f}°'\n")
             
-        print(f"Complete PyMOL script created: {pml_file}")
+        print(f"Hierarchical PyMOL script created: {pml_file}")
         return pml_file
         
     except Exception as e:
         traceback.print_exc()
-        print(f"Error creating complete PyMOL script: {e}")
+        print(f"Error creating hierarchical PyMOL script: {e}")
         return None
+
+def _generate_structure_coloring_commands_hierarchical(protein_1, domains, global_reference_id, bending_residues, window_size):
+    """Generate PyMOL commands for hierarchical structure domain coloring"""
+    commands = []
+    commands.append("# === HIERARCHICAL DOMAIN STRUCTURE COLORING ===")
+    
+    mid_point = (window_size - 1) // 2
+    util_res = protein_1.utilised_residues_indices
+    polymer = protein_1.get_polymer()
+
+    # Collect all bending residue indices
+    all_bend_res_indices = []
+    for b in bending_residues.values():
+        for i in b:
+            bb = i  # Segments are already in sliding window indices
+            index = polymer[bb].seqid.num
+            all_bend_res_indices.append(index)
+
+    # Color each domain with its hierarchical color
+    for domain in domains:
+        color_index = _get_hierarchical_domain_color_index(domain.domain_id, global_reference_id)
+        color = DOMAIN_COLORS[color_index]
+        
+        domain_res_reg = []
+        for s in range(domain.segments.shape[0]):
+            reg = []
+            for i in range(domain.segments[s][0], domain.segments[s][1]+1):
+                j = i  # Segments are already in sliding window indices
+                index = util_res[j]
+                res_num = polymer[index].seqid.num
+                if res_num not in all_bend_res_indices:
+                    reg.append(res_num)
+            domain_res_reg.extend(group_continuous_regions(reg))
+        
+        # Generate selection commands for this domain
+        for s in range(len(domain_res_reg)):
+            if s == 0:
+                commands.append(f"select domain_{domain.domain_id}, resi {domain_res_reg[s][0]}-{domain_res_reg[s][1]}")
+            else:
+                commands.append(f"select domain_{domain.domain_id}, domain_{domain.domain_id} + resi {domain_res_reg[s][0]}-{domain_res_reg[s][1]}")
+        
+        domain_type = "GLOBAL REFERENCE" if domain.domain_id == global_reference_id else "MOVING"
+        commands.append(f"color {color}, domain_{domain.domain_id}  # Domain {domain.domain_id} ({domain_type})")
+        commands.append("")
+
+    # Color the bending residues (green)
+    bend_res_groups = group_continuous_regions(all_bend_res_indices)
+    
+    if bend_res_groups:
+        commands.append("# Color bending residues")
+        for i, g in enumerate(bend_res_groups):
+            commands.append(f"select bending_residues_{i+1}, resi {g[0]}-{g[1]}")
+            commands.append(f"color green, bending_residues_{i+1}")
+        commands.append("")
+
+    # Additional PyMOL settings
+    commands.append("set dash_gap, 0")
+    commands.append("set dash_radius, 0.2")
+    commands.append("")
+    
+    return commands
+
+
+def _generate_arrow_commands_hierarchical(analysis_pairs, domains, global_reference_id, arrow_pdb_name, output_path):
+    """Generate PyMOL commands for hierarchical arrow display"""
+    commands = []
+    commands.append("# === HIERARCHICAL SCREW AXIS ARROWS ===")
+    commands.append(f'load {output_path}')
+    commands.append(f"load {arrow_pdb_name}")
+    commands.append("")
+    commands.append("# Basic protein display")
+    commands.append(f'hide everything, {output_path}')
+    commands.append(f'show cartoon, {output_path}')
+    commands.append(f'color gray80, {output_path}')
+    commands.append("")
+    commands.append(f"# Hide arrow atoms initially")
+    commands.append("hide everything, " + os.path.splitext(arrow_pdb_name)[0])
+    commands.append("")
+    
+    # Add arrow visualization for each analysis pair
+    for i, (moving_domain_id, reference_domain_id) in enumerate(analysis_pairs):
+        moving_domain = domains[moving_domain_id]
+        
+        # Get colors based on hierarchical structure
+        reference_color_index = _get_hierarchical_domain_color_index(reference_domain_id, global_reference_id)
+        moving_color_index = _get_hierarchical_domain_color_index(moving_domain_id, global_reference_id)
+        
+        shaft_color = DOMAIN_COLORS[reference_color_index]  # Shaft = reference domain color
+        head_color = DOMAIN_COLORS[moving_color_index]      # Head = moving domain color
+        
+        # Use chain-specific selections to completely separate arrows
+        chain_id = chr(ord('A') + i)
+        shaft_res_id = 100 + i * 50
+        head_res_id = shaft_res_id + 20
+        
+        commands.extend([
+            f"# Arrow {i+1}: Domain {moving_domain_id} (moving) relative to Domain {reference_domain_id} (reference)",
+            f"# Shaft color: {shaft_color} (reference domain), Head color: {head_color} (moving domain)",
+            f"# Rotation: {moving_domain.rot_angle:.1f}°",
+            "",
+            f"# Select shaft and head atoms by chain and residue",
+            f"select shaft_{i+1}, chain {chain_id} and resn SHF and resi {shaft_res_id}",
+            f"select head_{i+1}, chain {chain_id} and resn ARH and resi {head_res_id}",
+            "",
+            f"# Display shaft as thick licorice stick (REFERENCE domain color: {shaft_color})",
+            f"show sticks, shaft_{i+1}",
+            f"color {shaft_color}, shaft_{i+1}",
+            f"set stick_radius, 0.3, shaft_{i+1}",  # Thicker for licorice style
+            "",
+            f"# Display arrow head as clean cone (MOVING domain color: {head_color})",
+            f"show sticks, head_{i+1}",
+            f"color {head_color}, head_{i+1}",
+            f"set stick_radius, 0.25, head_{i+1}",
+            "",
+            f"# Connect atoms ONLY within each section",
+            f"bond shaft_{i+1}, shaft_{i+1}",
+            f"bond head_{i+1}, head_{i+1}",
+            "",
+        ])
+        
+    commands.extend([
+        "# Disable automatic bonding between different chains",
+        "set auto_bond, 0",
+        "",
+        "# Make arrows more prominent",
+        "set stick_transparency, 0.0",
+        "set stick_quality, 15",
+        "set sphere_quality, 3",
+        "set surface_quality, 2",
+        "",
+        "# Final settings",
+        "set depth_cue, 0",
+        "set ray_shadows, 1",
+        "set ray_shadow_decay_factor, 0.1",
+        "",
+        "# Better lighting for 3D arrow heads",
+        "set ambient, 0.2",
+        "set direct, 0.8",
+        "set reflect, 0.5",
+        "set shininess, 10",
+        "",
+        "# Clean up selections", 
+        "delete shaft_*",
+        "delete head_*",
+        "",
+    ])
+    
+    return commands
+
+
+def _get_hierarchical_domain_color_index(domain_id, global_reference_id):
+    """Get color index for domain based on hierarchical structure"""
+    if domain_id == global_reference_id:
+        return 0  # Global reference always gets blue (index 0)
+    
+    # For non-reference domains, assign colors sequentially starting from index 1
+    # This ensures consistent coloring across visualization components
+    return (domain_id + 1) % len(DOMAIN_COLORS)
     
 def _generate_structure_coloring_commands(protein_1, domains, fixed_domain_id, bending_residues, window_size):
     """Generate PyMOL commands for structure domain coloring"""
@@ -612,11 +880,13 @@ def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_pa
     return commands
 
 def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name: str, chain_2, window, domain_size, ratio, atoms,
-                       domains: list, analysis_pairs: list, global_reference_id: int, protein_1):
+                       domains: list, analysis_pairs: list, global_reference_id: int, protein_1, pair_specific_results=None):
     """
     Write w5_info file with hierarchical domain structure
+    FIXED: Use pair-specific screw axis results instead of domain objects
     analysis_pairs: list of (moving_domain_id, reference_domain_id) tuples
     global_reference_id: ID of the global reference domain
+    pair_specific_results: dict with pair-specific screw axis data
     """
     try:
         protein_folder = f"{protein_1_name}_{chain_1}_{protein_2_name}_{chain_2}"
@@ -685,14 +955,40 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 residue_str = _format_domain_residues(moving_domain, protein_1)
                 fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
                 fw.write(f"SIZE: \t{moving_domain.num_residues}\n")
-                fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(moving_domain.rmsd, 3)}A\n")
                 
-                # Write motion parameters
-                fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(moving_domain.ratio, 3)}\n")
-                fw.write(f"ANGLE OF ROTATION: \t{round(moving_domain.rot_angle, 3)} DEGREES\n")
-                fw.write(f"TRANSLATION ALONG AXIS:\t{round(moving_domain.translation, 3)} A\n")
-                fw.write(f"SCREW AXIS DIRECTION: \t{round(moving_domain.screw_axis[0], 3)} \t{round(moving_domain.screw_axis[1], 3)} \t{round(moving_domain.screw_axis[2], 3)}\n")
-                fw.write(f"POINT ON AXIS: \t{round(moving_domain.point_on_axis[0], 3)} \t{round(moving_domain.point_on_axis[1], 3)} \t{round(moving_domain.point_on_axis[2], 3)}\n")
+                # CRITICAL FIX: Use pair-specific results instead of domain object
+                pair_key = (moving_id, reference_id)
+                if pair_specific_results and pair_key in pair_specific_results:
+                    pair_data = pair_specific_results[pair_key]
+                    rot_angle = pair_data['rot_angle']
+                    translation = pair_data['translation']
+                    screw_axis = pair_data['screw_axis']
+                    point_on_axis = pair_data['point_on_axis']
+                    rmsd = pair_data['rmsd']
+                    
+                    # Calculate ratio (if available in pair data, otherwise use domain object)
+                    if 'ratio' in pair_data:
+                        ratio_value = pair_data['ratio']
+                    else:
+                        ratio_value = moving_domain.ratio
+                else:
+                    # Fallback to domain object if pair-specific data not available
+                    print(f"Warning: No pair-specific data for ({moving_id}, {reference_id}), using domain object")
+                    rot_angle = moving_domain.rot_angle
+                    translation = moving_domain.translation
+                    screw_axis = moving_domain.screw_axis
+                    point_on_axis = moving_domain.point_on_axis
+                    rmsd = moving_domain.rmsd
+                    ratio_value = moving_domain.ratio
+                
+                fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(rmsd, 3)}A\n")
+                
+                # Write motion parameters using pair-specific data
+                fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(ratio_value, 3)}\n")
+                fw.write(f"ANGLE OF ROTATION: \t{round(rot_angle, 3)} DEGREES\n")
+                fw.write(f"TRANSLATION ALONG AXIS:\t{round(translation, 3)} A\n")
+                fw.write(f"SCREW AXIS DIRECTION: \t{round(screw_axis[0], 3)} \t{round(screw_axis[1], 3)} \t{round(screw_axis[2], 3)}\n")
+                fw.write(f"POINT ON AXIS: \t{round(point_on_axis[0], 3)} \t{round(point_on_axis[1], 3)} \t{round(point_on_axis[2], 3)}\n")
                 
                 # Write bending residues
                 if hasattr(moving_domain, 'bend_res') and moving_domain.bend_res:

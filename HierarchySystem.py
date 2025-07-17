@@ -110,50 +110,73 @@ class HierarchicalDomainSystem:
         print(f"Final domain hierarchy: {self.domain_hierarchy}")
         return hierarchy
     
-    def create_reference_mapping(self):
-        """
-        Create mapping of which domain should be used as reference for each domain
-        """
-        connectivity = self.build_connectivity_graph()
-        
-        for i, domain_id in enumerate(self.domain_hierarchy):
-            if i == 0:
-                # First domain is global reference
-                self.reference_mapping[domain_id] = domain_id
-            else:
-                # Look for direct connections to earlier domains in hierarchy
-                # Search in REVERSE order of hierarchy to find most recently processed neighbor
-                best_reference = None
-                for j in range(i - 1, -1, -1):  # Go backwards through earlier domains
-                    earlier_domain_id = self.domain_hierarchy[j]
-                    if earlier_domain_id in connectivity[domain_id]:
-                        best_reference = earlier_domain_id
-                        break  # Take the first (most recent) connection found
-                
-                # Fallback to global reference if no direct connection
-                if best_reference is None:
-                    best_reference = self.domain_hierarchy[0]
-                
-                self.reference_mapping[domain_id] = best_reference
-        
-        return self.reference_mapping
-    
     def get_analysis_pairs(self):
         """
         Get list of (moving_domain, reference_domain) pairs for analysis
         """
+        # MUST create hierarchy first, then reference mapping
         hierarchy = self.create_hierarchical_ordering()
         reference_mapping = self.create_reference_mapping()
         
         analysis_pairs = []
         
-        for domain_id in hierarchy:
-            reference_id = reference_mapping[domain_id]
-            
-            if domain_id != reference_id:  # Skip self-references
-                analysis_pairs.append((domain_id, reference_id))
+        for domain_id, reference_list in reference_mapping.items():
+            if isinstance(reference_list, list):
+                for reference_id in reference_list:
+                    if domain_id != reference_id:  # Skip self-references
+                        analysis_pairs.append((domain_id, reference_id))
+            else:
+                # Handle case where reference_mapping still returns single values
+                reference_id = reference_list
+                if domain_id != reference_id:
+                    analysis_pairs.append((domain_id, reference_id))
+        
         print(f"Analysis pairs: {analysis_pairs}")
         return analysis_pairs
+
+    def create_reference_mapping(self):
+        """
+        Create mapping - small domains analyzed relative to larger connected domains
+        BUT respect the global reference constraint
+        """
+        # Make sure hierarchy exists
+        if not self.domain_hierarchy:
+            self.create_hierarchical_ordering()
+        
+        connectivity = self.build_connectivity_graph()
+        self.reference_mapping = {}
+        
+        # Get global reference from hierarchy
+        global_reference_id = self.domain_hierarchy[0]
+        
+        # Get domain sizes
+        domain_sizes = {}
+        for domain in self.domains:
+            domain_sizes[domain.domain_id] = domain.num_residues
+        
+        for domain in self.domains:
+            domain_id = domain.domain_id
+            
+            if domain_id == global_reference_id:
+                # Global reference is never a moving domain
+                self.reference_mapping[domain_id] = [domain_id]  # Self-reference
+                continue
+            
+            # Find all connected domains that are larger OR are the global reference
+            reference_candidates = []
+            for connected_id in connectivity[domain_id]:
+                if (domain_sizes[connected_id] > domain_sizes[domain_id] or 
+                    connected_id == global_reference_id):
+                    reference_candidates.append(connected_id)
+            
+            # ONLY analyze if there are valid reference candidates
+            if reference_candidates:
+                self.reference_mapping[domain_id] = reference_candidates
+            else:
+                # Don't create any analysis pairs for this domain
+                self.reference_mapping[domain_id] = [domain_id]  # Self-reference (no analysis)
+        
+        return self.reference_mapping
     
     def print_analysis_plan(self):
         """
