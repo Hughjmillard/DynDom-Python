@@ -106,9 +106,7 @@ class Engine:
 
             # screws = self.determine_domains_screw_axis()
             screws = self.determine_domains_screw_axis_hierarchical()
-            for screw in screws:
-                print("Screw :", screw)
-            
+
             # self.determine_bending_residues()
             self.determine_bending_residues_hierarchical()
             
@@ -130,7 +128,6 @@ class Engine:
                     self.bending_residues_indices, self.window,
                     getattr(self.clusterer, 'pair_specific_screw_results', None)  # Pass pair-specific results
                 )
-                print(f"write_complete_pymol_script result: {result}")
             except Exception as e:
                 print(f"ERROR in write_complete_pymol_script: {e}")
                 import traceback
@@ -144,85 +141,9 @@ class Engine:
                 getattr(self.clusterer, 'pair_specific_screw_results', None) 
             )
             running = False
-            print(f'\nrmsd of whole protein best fit: {self.chain_superimpose_result.rmsd:.3f}A\n')
         return True
         
    
-    def log_fixed_domain_coordinates(self, description="Unnamed test"):
-        """
-        Print coordinates of the fixed domain from both proteins for comparison
-        """
-        try:
-            fixed_domain_id = self.clusterer.fixed_domain
-            fixed_domain = self.clusterer.domains[fixed_domain_id]
-            
-            # print(f"\n=== Fixed Domain Coordinates - {description} ===")
-            # print(f"Fixed Domain ID: {fixed_domain_id}")
-            # print(f"Fixed Domain Segments: {fixed_domain.segments}")
-            
-            # Get slide window residues - FIXED: Handle different object types
-            protein_1_slide = self.protein_1.get_slide_window_residues()
-            
-            # For fitted_protein_2, we need to manually extract the slide window equivalent
-            # Since it's a Chain object, we need to get the polymer and extract the right residues
-            fitted_protein_2_polymer = self.fitted_protein_2.get_polymer()
-            protein_1_indices = self.protein_1.slide_window_residues_indices
-            protein_1_util_indices = self.protein_1.utilised_residues_indices
-            
-            # print("\nFirst 5 CA atoms from fixed domain:")
-            # print("Residue | Protein 1 CA Position        | Protein 2 CA Position        | Distance")
-            # print("--------|-------------------------------|-------------------------------|----------")
-            
-            count = 0
-            for s in fixed_domain.segments:
-                for i in range(s[0], s[1] + 1):
-                    if count >= 5:  # Only show first 5 for readability
-                        break
-                        
-                    # Get protein 1 CA
-                    if 'CA' in protein_1_slide[i]:
-                        ca1 = protein_1_slide[i]['CA'][0].pos
-                        
-                        # Get corresponding protein 2 CA - FIXED: Use utilised_residues_indices
-                        slide_window_start = protein_1_indices[0]
-                        actual_residue_index = protein_1_util_indices[slide_window_start + i]
-                        
-                        if 'CA' in fitted_protein_2_polymer[actual_residue_index]:
-                            ca2 = fitted_protein_2_polymer[actual_residue_index]['CA'][0].pos
-                            
-                            # Calculate distance between corresponding atoms
-                            distance = ((ca1.x - ca2.x)**2 + (ca1.y - ca2.y)**2 + (ca1.z - ca2.z)**2)**0.5
-                            
-                            # print(f"  {i:3d}   | ({ca1.x:6.3f}, {ca1.y:6.3f}, {ca1.z:6.3f}) | ({ca2.x:6.3f}, {ca2.y:6.3f}, {ca2.z:6.3f}) | {distance:6.3f}Å")
-                            count += 1
-                
-                if count >= 5:
-                    break
-            
-            # Calculate average distance for all fixed domain CA atoms
-            total_distance = 0
-            total_count = 0
-            for s in fixed_domain.segments:
-                for i in range(s[0], s[1] + 1):
-                    if 'CA' in protein_1_slide[i]:
-                        ca1 = protein_1_slide[i]['CA'][0].pos
-                        
-                        slide_window_start = protein_1_indices[0]
-                        actual_residue_index = protein_1_util_indices[slide_window_start + i]
-                        
-                        if 'CA' in fitted_protein_2_polymer[actual_residue_index]:
-                            ca2 = fitted_protein_2_polymer[actual_residue_index]['CA'][0].pos
-                            distance = ((ca1.x - ca2.x)**2 + (ca1.y - ca2.y)**2 + (ca1.z - ca2.z)**2)**0.5
-                            total_distance += distance
-                            total_count += 1
-            
-            if total_count > 0:
-                avg_distance = total_distance / total_count
-                # print(f"\nAverage CA distance across entire fixed domain: {avg_distance:.3f}Å")
-            
-        except Exception as e:
-            print(f"Error logging fixed domain coordinates: {e}")
-
     def check_sequence_identity(self, res_names_1, res_names_2):
         """
         Checks the sequence identity of the 2 protein chains.
@@ -346,8 +267,6 @@ class Engine:
                                                                                        fitted_protein_polymer,
                                                                                        ptype, gemmi.SupSelect.MainChain)
         fitted_protein_polymer.transform_pos_and_adp(self.chain_superimpose_result.transform)
-        # log_protein_position("Fitted Protein 2", self.fitted_protein_2, "After whole-protein transformation")
-        # Print RMSD
         
 
     def sliding_window_superimpose_residues(self):
@@ -414,37 +333,16 @@ class Engine:
     def determine_domains_screw_axis(self):
         """
         Calculates the screw axis of the dynamic domains.
+        This method is mostly redundant now, as the hierarchical system is used instead. It is kept as a fallback
+        in case the hierarchical system does not work as expected.
         :return:
         """
-        # print(f"\n=== BEFORE SCREW AXIS CALCULATION ===")
-        # print(f"self.clusterer.fixed_domain = {self.clusterer.fixed_domain}")
-        # print(f"Fixed domain size: {self.clusterer.domains[self.clusterer.fixed_domain].num_residues}")
-        # print(f"Fixed domain segments: {self.clusterer.domains[self.clusterer.fixed_domain].segments}")
-        """ FOLLOWING CODE REMOVED FOR TESTING PURPOSES, REPLACED BELOW
-        # Get the transformations of the fixed domain of Protein 2 fitting to fixed domain of Protein 1
-        fixed_domain_r: gemmi.SupResult = self.get_fixed_domain_transformations()
-        # Apply the fixed domain transformation to the fitted Protein 2 to save GLOBALLY
-        self.fitted_protein_2.get_polymer().transform_pos_and_adp(fixed_domain_r.transform)
-
-        # Get the slide chain of Protein 1
-        original_protein_1_slide_chain: gemmi.ResidueSpan = self.protein_1.get_slide_window_residues()
-        # Get the slide chain of Protein 2 and fit to Protein 1 relative to the fixed domain.
-        transformed_protein_2_slide_chain: gemmi.ResidueSpan = self.protein_2.get_slide_window_residues()
-        transformed_protein_2_slide_chain.transform_pos_and_adp(fixed_domain_r.transform)
-        """
-        # log_protein_position("Fitted Protein 2", self.fitted_protein_2, "Before fixed-domain transformation")
-
         # Get the transformations of the fixed domain of Protein 2 fitting to fixed domain of Protein 1
         fixed_domain_r: gemmi.SupResult = self.get_fixed_domain_transformations()
 
-        # print(f"\n=== Fixed Domain Transformation ===")
-        # print(f"  RMSD: {fixed_domain_r.rmsd:.3f}A")
-        # print(f"  Translation: ({fixed_domain_r.transform.vec.x:.3f}, {fixed_domain_r.transform.vec.y:.3f}, {fixed_domain_r.transform.vec.z:.3f})")
         self.fitted_protein_2 = self.protein_2.get_chain()
         # Apply the fixed domain transformation to the fitted Protein 2 to save GLOBALLY for final output
         self.fitted_protein_2.get_polymer().transform_pos_and_adp(fixed_domain_r.transform)
-
-        # log_protein_position("Fitted Protein 2", self.fitted_protein_2, "After fixed-domain transformation")
 
         self.log_fixed_domain_coordinates("After fixed-domain transformation")
 
@@ -482,16 +380,10 @@ class Engine:
                     transformed_protein_1_domain_chain.add_residue(original_protein_1_slide_chain[i])
                     transformed_protein_2_domain_chain.add_residue(transformed_protein_2_slide_chain[i])
 
-            # print(f"Ori before : {original_protein_1_slide_chain[4].sole_atom('CA').pos}")
-            # print(f"Trans before : {transformed_protein_1_domain_chain[4].sole_atom('CA').pos}")
-
             # r: gemmi.SupResult = gemmi.superpose_positions(original_atoms, transformed_atoms)
             transformed_protein_1_domain_polymer: gemmi.ResidueSpan = transformed_protein_1_domain_chain.get_polymer()
             transformed_protein_2_domain_polymer: gemmi.ResidueSpan = transformed_protein_2_domain_chain.get_polymer()
             ptype = transformed_protein_1_domain_polymer.check_polymer_type()
-
-            # === DEBUGGING: Print superposition info ===
-            # print(f"\n=== DOMAIN {domain.domain_id} SUPERPOSITION DEBUG ===")
             
             # Save original coordinates BEFORE transformation - CRITICAL FIX
             original_coords_backup = []
@@ -503,47 +395,15 @@ class Engine:
                     transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.z
                 ]))
             
-            # Print coordinates BEFORE transformation
-            if len(transformed_protein_1_domain_polymer) > 0:
-                ca_before = transformed_protein_1_domain_polymer[0]['CA'][0].pos
-                # print(f"P1 moving domain CA[0] BEFORE: ({ca_before.x:.6f}, {ca_before.y:.6f}, {ca_before.z:.6f})")
-
             # Fit Protein 1 dynamic domain onto Transformed Protein 2 dynamic domain
             r: gemmi.SupResult = gemmi.calculate_superposition(transformed_protein_2_domain_polymer,
                                                                 transformed_protein_1_domain_polymer, 
                                                                 ptype, gemmi.SupSelect.MainChain)
             domain.rmsd = r.rmsd
-            
-            # === DEBUGGING: Print superposition results ===
-            # print(f"Superposition RMSD: {r.rmsd:.6f}A")
-            # print(f"Rotation matrix determinant: {np.linalg.det(np.asarray(r.transform.mat.tolist())):.6f}")
-            # print(f"Translation vector: ({r.transform.vec.x:.6f}, {r.transform.vec.y:.6f}, {r.transform.vec.z:.6f})")
+
             
             # Transform the domain chain
             transformed_protein_1_domain_polymer.transform_pos_and_adp(r.transform)
-            
-            # === DEBUGGING: Print coordinates AFTER transformation ===
-            # === DEBUGGING: Print detailed atom-by-atom comparison ===
-            # print(f"\n--- DETAILED ATOM-BY-ATOM COMPARISON ---")
-            for i in range(min(100, len(transformed_protein_1_domain_polymer))):
-                if len(transformed_protein_2_domain_polymer) > i:
-                    ca_p1_after = transformed_protein_1_domain_polymer[i]['CA'][0].pos
-                    ca_p2_target = transformed_protein_2_domain_polymer[i]['CA'][0].pos
-                    
-                    # Calculate distance
-                    target_diff = np.array([ca_p1_after.x - ca_p2_target.x, ca_p1_after.y - ca_p2_target.y, ca_p1_after.z - ca_p2_target.z])
-                    target_distance = np.linalg.norm(target_diff)
-                    
-                    # Get residue info for context
-                    res_p1 = transformed_protein_1_domain_polymer[i]
-                    res_p2 = transformed_protein_2_domain_polymer[i]
-                    
-
-            for i in range(min(10, len(transformed_protein_1_domain_polymer))):
-                p1_pos = transformed_protein_1_domain_polymer[i]['CA'][0].pos
-                p2_pos = transformed_protein_2_domain_polymer[i]['CA'][0].pos
-                distance = np.sqrt((p1_pos.x - p2_pos.x)**2 + (p1_pos.y - p2_pos.y)**2 + (p1_pos.z - p2_pos.z)**2)
-
     
             # Get the rotation matrix of the domain transformation and convert to rotation vector
             rot_vec = Rotation.from_matrix(np.asarray(r.transform.mat.tolist())).as_rotvec(degrees=True)
@@ -658,7 +518,6 @@ class Engine:
         """
         fixed_domain = self.clusterer.domains[self.clusterer.fixed_domain]
         fixed_domain_segments = fixed_domain.segments
-        # print("Fixed segments:", fixed_domain_segments)
         mid_point = (self.window - 1) // 2
         fixed_domain_rot_vecs = self.rotation_vecs[fixed_domain_segments[0][0]+mid_point:fixed_domain_segments[0][1]+mid_point]
 
@@ -675,11 +534,6 @@ class Engine:
         # Get the covariance and inversed covariance matrices
         fixed_domain_covar = np.cov(fixed_domain_centered_vecs.T)
         fixed_domain_inv_covar = np.linalg.inv(fixed_domain_covar)
-        # print(f"Fixed Domain Mean = {fixed_domain_mean}")
-        # print(f"Fixed Domain STD = {fixed_domain_std}")
-        # print(f"Fixed Domain Var = {fixed_domain_var}")
-        # print(f"Fixed Domain Covariance = \n{fixed_domain_covar}")
-        # print(f"Fixed Domain Inverse Covariance = \n{fixed_domain_inv_covar}")
 
         # For each dynamic domain,
         for domain in self.clusterer.domains:
@@ -688,9 +542,7 @@ class Engine:
                 continue
             bend_res_set = set()
             self.bending_residues_indices[domain.domain_id] = []
-            # print(f"Domain {domain.domain_id}")
             dyn_dom_segments = domain.segments
-            # print(f"Dyn Segments:", dyn_dom_segments)
             dyn_dom_rot_vecs = self.rotation_vecs[dyn_dom_segments[0][0]+mid_point:dyn_dom_segments[0][1]+mid_point]
             
             for i in range(1, dyn_dom_segments.shape[0]):
@@ -704,12 +556,6 @@ class Engine:
             dyn_dom_centered_vecs = dyn_dom_rot_vecs - dyn_dom_mean
             dyn_dom_covar = np.cov(dyn_dom_centered_vecs.T)
             dyn_dom_inv_covar = np.linalg.inv(dyn_dom_covar)
-
-            # print(f"Dyn Domain Mean = {dyn_dom_mean}")
-            # print(f"Dyn Domain STD = {dyn_dom_std}")
-            # print(f"Dyn Domain Var = {dyn_dom_var}")
-            # print(f"Dyn Domain Covariance = \n{dyn_dom_covar}")
-            # print(f"Dyn Domain Inverse Covariance = \n{dyn_dom_inv_covar}")
 
             # Calculate the indices of the previous and next residues for each segment of the dynamic domain.
             dyn_dom_prev_indices = dyn_dom_segments[:, 0] - 1
@@ -730,87 +576,58 @@ class Engine:
             # 1D Array of booleans where True means previous index before dyn dom segment is fixed domain segment.
             dyn_prev_is_fixed = np.in1d(dyn_dom_prev_indices, fixed_domain.segments[:, 1])
             dyn_prev_is_fixed_ind = np.where(dyn_prev_is_fixed)[0]
-
-            # print("Fixed domain segment next index is dyn dom segment: ")
-            # print("Fixed next is dyn:", fixed_next_is_dyn)
-            # print(fixed_next_is_dyn_ind)
-            # print("Fixed domain segment prev index is dyn dom segment: ")
-            # print("Fixed prev is dyn:", fixed_prev_is_dyn)
-            # print(fixed_prev_is_dyn_ind)
-
-            # print("Dyn dom segment next index is fixed domain segment: ")
-            # print(dyn_next_is_fixed)
-            # print(dyn_next_is_fixed_ind)
-            # print("Dyn dom segment prev index is fixed domain segment: ")
-            # print(dyn_prev_is_fixed)
-            # print(dyn_prev_is_fixed_ind)
-
             q_variance = 4.6
 
             # Go backwards through the fixed domain residues of the segments
-            # print("Backward fixed")
             for segment_ind in fixed_next_is_dyn_ind:
                 segment = fixed_domain.segments[segment_ind]
                 bend_res_set.add(segment[1])
                 for i in range(segment[1], segment[0] - 1, -1):
                     centered_vec = self.rotation_vecs[i+mid_point] - fixed_domain_mean
                     q_value = centered_vec @ fixed_domain_inv_covar @ centered_vec
-                    # print("Backward Fixed Q Value =", q_value)
-                    # print(i, q_value)
                     if q_value > q_variance:
-                        # print("Hit")
+
                         bend_res_set.add(i)
                     else:
                         break
 
             # Go forwards through the dyn dom residues of the segments
-            # print("Forward Dyn")
             for segment_ind in dyn_prev_is_fixed_ind:
                 segment = domain.segments[segment_ind]
                 bend_res_set.add(segment[0])
-                # print(segment)
                 for i in range(segment[1], segment[0] + 1):
                     centered_vec = self.rotation_vecs[i+mid_point] - dyn_dom_mean
                     q_value = centered_vec @ dyn_dom_inv_covar @ centered_vec
-                    # print("Forward Dyn Q Value =", q_value)
-                    # print(i, q_value)
+
                     if q_value > q_variance:
-                        # print("Hit")
+
                         bend_res_set.add(i)
                     else:
                         break
 
             # Go forwards through the fixed domain residues of the segments
-            # print("Forward Fixed")
             for segment_ind in fixed_prev_is_dyn_ind:
                 segment = fixed_domain.segments[segment_ind]
                 bend_res_set.add(segment[0])
-                # print(segment)
                 for i in range(segment[0], segment[1] + 1):
                     centered_vec = self.rotation_vecs[i+mid_point] - fixed_domain_mean
                     q_value = centered_vec @ fixed_domain_inv_covar @ centered_vec
-                    # print("Forward Fixed Q Value =", q_value)
-                    # print(i, q_value)
+    
                     if q_value > q_variance:
-                        # print("Hit")
+
                         bend_res_set.add(i)
                     else:
                         break
 
             # Go backwards through the dyn dom residues of the segments
-            # print("Backward Dyn")
             for segment_ind in dyn_next_is_fixed_ind:
                 segment = domain.segments[segment_ind]
                 bend_res_set.add(segment[1])
-                # print(segment)
                 for i in range(segment[1], segment[0] - 1, -1):
                     centered_vec = self.rotation_vecs[i+mid_point] - dyn_dom_mean
                     q_value = centered_vec @ dyn_dom_inv_covar @ centered_vec
-                    # print("Backward Dyn Q Value =", q_value)
-                    # if q_value < p or q_value > 1-p:
-                    # print(i, q_value)
                     if q_value > q_variance:
-                        # print("Hit")
+
                         bend_res_set.add(i)
                     else:
                         break
@@ -825,26 +642,17 @@ class Engine:
         Get the transformation of the fixed domain of protein 2 to protein 1
         :return:
         """
-        # print(f"\n=== GET_FIXED_DOMAIN_TRANSFORMATIONS DEBUG ===")
-        # print(f"Using fixed_domain_id: {self.clusterer.fixed_domain}")
         slide_window_1 = self.protein_1.get_slide_window_residues()
         slide_window_2 = self.protein_2.get_slide_window_residues()
         coords_1 = []
         coords_2 = []
         fixed_domain_id = self.clusterer.fixed_domain
-
-        # print(f"Fixed domain segments: {self.clusterer.domains[fixed_domain_id].segments}")
-
         for s in self.clusterer.domains[fixed_domain_id].segments:
-            # print(f"Processing segment: {s[0]} to {s[1]}")
             for i in range(s[0], s[1] + 1):
                 for a in self.atoms_to_use:
                     coords_1.append(slide_window_1[i][a][0].pos)
                     coords_2.append(slide_window_2[i][a][0].pos)
-
-        # print(f"Total atoms used for fixed domain transformation: {len(coords_1)}")
         r: gemmi.SupResult = gemmi.superpose_positions(coords_1, coords_2)
-        # print(f"Fixed domain transformation RMSD: {r.rmsd:.3f}A")
         return r
 
     def get_arrow_coords(self):
@@ -874,24 +682,12 @@ class Engine:
             print("No hierarchical analysis pairs found, falling back to original method")
             return self.determine_domains_screw_axis()
 
-        print("\n=== HIERARCHICAL DOMAIN SCREW AXIS ANALYSIS ===")
-        self.clusterer.print_hierarchical_analysis()
-
         # Get global reference domain for final output fitting only
         global_reference_id = self.clusterer.get_hierarchical_fixed_domain()
         global_reference_domain = self.clusterer.domains[global_reference_id]
 
-        print(f"\nGlobal reference domain: {global_reference_id}")
-        print(f"Global reference domain size: {global_reference_domain.num_residues}")
-        print(f"Global reference domain segments: {global_reference_domain.segments}")
-
         # Perform initial global fit using global reference domain FOR FINAL OUTPUT ONLY
         global_fixed_domain_r = self.get_fixed_domain_transformations_specific(global_reference_domain)
-
-        print(f"\n=== Global Domain Transformation (for final output only) ===")
-        print(f"  RMSD: {global_fixed_domain_r.rmsd:.3f}A")
-        print(f"  Translation: ({global_fixed_domain_r.transform.vec.x:.3f}, {global_fixed_domain_r.transform.vec.y:.3f}, {global_fixed_domain_r.transform.vec.z:.3f})")
-
         # Apply the transformation to fitted_protein_2 for final output
         self.fitted_protein_2 = self.protein_2.get_chain()
         self.fitted_protein_2.get_polymer().transform_pos_and_adp(global_fixed_domain_r.transform)
@@ -902,7 +698,7 @@ class Engine:
         # Get the original slide window for protein 1 (never changes)
         original_protein_1_slide_chain = self.protein_1.get_slide_window_residues()
 
-        # CRITICAL FIX: Store results per analysis pair instead of overwriting domain objects
+        # Store results per analysis pair instead of overwriting domain objects
         pair_specific_results = {}
         
         # Now analyze each domain pair using ITS OWN reference domain
@@ -910,28 +706,15 @@ class Engine:
         for moving_domain_id, reference_domain_id in self.clusterer.analysis_pairs:
             moving_domain = self.clusterer.domains[moving_domain_id]
             reference_domain = self.clusterer.domains[reference_domain_id]
-        
-            print(f"\n=== ANALYZING Domain {moving_domain_id} relative to Domain {reference_domain_id} ===")
-            print(f"Moving domain size: {moving_domain.num_residues} residues")
-            print(f"Reference domain size: {reference_domain.num_residues} residues")
-            
+
             # Get pair-specific transformation
-            print(f"Calculating transformation for reference domain {reference_domain_id}")
+
             pair_specific_transform = self.get_fixed_domain_transformations_specific(reference_domain)
-            
-            print(f"Pair-specific transformation RMSD: {pair_specific_transform.rmsd:.3f}A")
-            print(f"Pair-specific translation: ({pair_specific_transform.transform.vec.x:.3f}, {pair_specific_transform.transform.vec.y:.3f}, {pair_specific_transform.transform.vec.z:.3f})")
-            
-            # FIXED: Create fresh fitted_protein_2 for this reference domain (resets to original position)
-            # This is CRITICAL - get_chain() resets protein 2 to original coordinates
+    
+            # get_chain() resets protein 2 to original coordinates
             pair_fitted_protein_2 = self.protein_2.get_chain()
             pair_fitted_protein_2.get_polymer().transform_pos_and_adp(pair_specific_transform.transform)
             
-            # DEBUGGING: Calculate RMSD between reference domains to verify alignment
-            reference_domain_rmsd = self.calculate_reference_domain_alignment_rmsd(
-                reference_domain, original_protein_1_slide_chain, pair_fitted_protein_2
-            )
-            print(f"Reference domain alignment RMSD: {reference_domain_rmsd:.6f}A")
             
             # Get slide window from original protein and apply the same transformation
             # (This ensures the slide window coordinates match the fitted protein coordinates)
@@ -950,7 +733,7 @@ class Engine:
             
             domain_screw_axes.append(screw_axis_data['screw_axis_tuple'])
         
-        # CRITICAL FIX: Store pair-specific results for later use by output functions
+        # Store pair-specific results for later use by output functions
         self.clusterer.pair_specific_screw_results = pair_specific_results
         
         # Assign "primary" screw axis to domain objects (for backward compatibility)
@@ -971,71 +754,13 @@ class Engine:
                 domain.rmsd = results['rmsd']
                 
                 assigned_domains.add(moving_domain_id)
-                print(f"Assigned primary screw axis for Domain {moving_domain_id} from pair ({moving_domain_id}, {reference_domain_id})")
-
         return domain_screw_axes
-
-    def calculate_reference_domain_alignment_rmsd(self, reference_domain, protein_1_slide_chain, fitted_protein_2):
-        """
-        Calculate RMSD between reference domain atoms in protein 1 and fitted protein 2
-        to verify proper alignment after transformation
-        """
-        try:
-            fitted_protein_2_polymer = fitted_protein_2.get_polymer()
-            
-            # Get slide window indices mapping
-            protein_1_indices = self.protein_1.slide_window_residues_indices
-            protein_1_util_indices = self.protein_1.utilised_residues_indices
-            slide_window_start = protein_1_indices[0]
-            
-            coords_p1 = []
-            coords_p2 = []
-            
-            # Extract coordinates for reference domain atoms
-            for segment in reference_domain.segments:
-                for i in range(segment[0], segment[1] + 1):
-                    # Get protein 1 coordinates from slide window
-                    for atom_name in self.atoms_to_use:
-                        if atom_name in protein_1_slide_chain[i]:
-                            p1_pos = protein_1_slide_chain[i][atom_name][0].pos
-                            coords_p1.append([p1_pos.x, p1_pos.y, p1_pos.z])
-                            
-                            # Get corresponding protein 2 coordinates
-                            actual_residue_index = protein_1_util_indices[slide_window_start + i]
-                            if actual_residue_index < len(fitted_protein_2_polymer):
-                                residue_p2 = fitted_protein_2_polymer[actual_residue_index]
-                                if atom_name in residue_p2:
-                                    p2_pos = residue_p2[atom_name][0].pos
-                                    coords_p2.append([p2_pos.x, p2_pos.y, p2_pos.z])
-                                else:
-                                    # If atom not found, skip this pair
-                                    coords_p1.pop()
-            
-            if len(coords_p1) == len(coords_p2) and len(coords_p1) > 0:
-                # Convert to numpy arrays
-                coords_p1 = np.array(coords_p1)
-                coords_p2 = np.array(coords_p2)
-                
-                # Calculate RMSD
-                diff = coords_p1 - coords_p2
-                rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
-                
-                return rmsd
-            else:
-                print(f"Warning: Coordinate count mismatch - P1: {len(coords_p1)}, P2: {len(coords_p2)}")
-                return -1.0
-                
-        except Exception as e:
-            print(f"Error calculating reference domain RMSD: {e}")
-            return -1.0
 
     def analyze_domain_pair_screw_axis_with_storage(self, moving_domain, reference_domain, 
                                                     original_protein_1_slide_chain, transformed_protein_2_slide_chain):
         """
         Analyze screw axis for a specific domain pair and return all results without modifying domain objects
         """
-        print(f"Using domain-specific analysis for Domain {moving_domain.domain_id} → Domain {reference_domain.domain_id}")
-        
         # Prepare domain chains exactly like the original method
         original_protein_1_domain_chain = gemmi.Chain(self.protein_1.chain_param)
         transformed_protein_1_domain_chain = gemmi.Chain(self.protein_1.chain_param)
@@ -1063,9 +788,6 @@ class Engine:
                 transformed_protein_1_domain_polymer[i][self.atoms_to_use[0]][0].pos.z
             ]))
         
-        print(f"P1 moving domain length: {len(transformed_protein_1_domain_polymer)} residues")
-        print(f"P2 moving domain length: {len(transformed_protein_2_domain_polymer)} residues")
-        
         # Fit moving domain of protein 1 onto moving domain of protein 2
         r = gemmi.calculate_superposition(
             transformed_protein_2_domain_polymer,
@@ -1074,9 +796,7 @@ class Engine:
             gemmi.SupSelect.MainChain
         )
         
-        rmsd = r.rmsd
-        print(f"Superposition RMSD: {rmsd:.6f}A")
-        
+        rmsd = r.rmsd        
         # Transform the domain
         transformed_protein_1_domain_polymer.transform_pos_and_adp(r.transform) #CHECK ME
         
@@ -1110,39 +830,10 @@ class Engine:
 
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec)
 
-            print(f'Rot angle: {rot_angle:.6f} degrees')
-            print(f'Rot angle radians: {math.radians(rot_angle):.6f} radians')
-
-            h_tan_prev = 2 * math.tan(0.5 * rot_angle)
             h_tan = 2 * math.tan(0.5 * math.radians(rot_angle))  # rot_angle is already in degrees
-            print(f'h_tan_prev: {h_tan_prev:.6f}, h_tan: {h_tan:.6f}')
-
-            atoms_to_axis_direction_prev = (rotation_amplitude * cross_prod_axis) / h_tan_prev
             atoms_to_axis_direction = (rotation_amplitude * cross_prod_axis) / h_tan
-            print(f"Atoms to axis direction (prev): {atoms_to_axis_direction_prev}")
-            print(f"Atoms to axis direction: {atoms_to_axis_direction}")
-
-            point_on_axis_prev = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction_prev
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
-            print(f"Point on axis (prev): {point_on_axis_prev}")
-            print(f"Point on axis: {point_on_axis}")
 
-            print(f"\n=== COORDINATE SYSTEM CHECK ===")
-            print(f"Reference domain ID: {reference_domain.domain_id}")
-            print(f"original_atom_coords: {original_atom_coords}")
-            print(f"transformed_atom_coords: {transformed_atom_coords}")
-            print(f"disp_vec: {disp_vec}")
-            print(f"parallel_translation: {parallel_translation}")
-            print(f"rotational_part: {rotational_part}")
-            print(f"Point calculated from original_atom_coords: {original_atom_coords}")
-            print(f"Point calculated from transformed_atom_coords: {transformed_atom_coords}")
-            
-            print(f"Final results:")
-            print(f"  Rotation angle: {rot_angle:.6f} degrees")
-            print(f"  Translation along axis: {translation_component_value:.6f}A")
-            print(f"  Point on axis: ({point_on_axis[0]:.6f}, {point_on_axis[1]:.6f}, {point_on_axis[2]:.6f})")
-            print(f"  Screw axis direction: ({unit_rot_vec[0]:.6f}, {unit_rot_vec[1]:.6f}, {unit_rot_vec[2]:.6f})")
-            
             # Return all results as a dictionary instead of modifying domain object
             return {
                 'rot_angle': rot_angle,
@@ -1173,25 +864,18 @@ class Engine:
         """
         Get transformation for a specific domain (not necessarily the global fixed domain)
         """
-        print(f"\n=== GET_FIXED_DOMAIN_TRANSFORMATIONS_SPECIFIC DEBUG ===")
-        print(f"Using domain_id: {specific_domain.domain_id}")
-        print(f"Domain segments: {specific_domain.segments}")
-        
         slide_window_1 = self.protein_1.get_slide_window_residues()
         slide_window_2 = self.protein_2.get_slide_window_residues()
         coords_1 = []
         coords_2 = []
 
         for s in specific_domain.segments:
-            print(f"Processing segment: {s[0]} to {s[1]}")
             for i in range(s[0], s[1] + 1):
                 for a in self.atoms_to_use:
                     coords_1.append(slide_window_1[i][a][0].pos)
                     coords_2.append(slide_window_2[i][a][0].pos)
 
-        print(f"Total atoms used for domain transformation: {len(coords_1)}")
         r = gemmi.superpose_positions(coords_1, coords_2)
-        print(f"Domain transformation RMSD: {r.rmsd:.3f}A")
         return r
 
     def determine_bending_residues_hierarchical(self):
@@ -1201,8 +885,6 @@ class Engine:
         if not hasattr(self.clusterer, 'analysis_pairs') or not self.clusterer.analysis_pairs:
             print("No hierarchical analysis pairs found, falling back to original method")
             return self.determine_bending_residues()
-        
-        print("\n=== HIERARCHICAL BENDING RESIDUE ANALYSIS ===")
         
         # Get global reference domain
         global_reference_id = self.clusterer.get_hierarchical_fixed_domain()
@@ -1214,11 +896,6 @@ class Engine:
         for moving_domain_id, reference_domain_id in self.clusterer.analysis_pairs:
             moving_domain = self.clusterer.domains[moving_domain_id]
             reference_domain = self.clusterer.domains[reference_domain_id]
-            
-            print(f"\nAnalyzing bending residues between Domain {reference_domain_id} and Domain {moving_domain_id}")
-            
-            # For now, use a simplified approach - you can enhance this later
-            # This is a placeholder that follows the same pattern as the original method
             bending_residues = self.analyze_bending_residues_for_pair(moving_domain, reference_domain)
             
             if bending_residues:
@@ -1247,53 +924,7 @@ class Engine:
         # Remove duplicates and sort
         bending_residues = sorted(list(set(bending_residues)))
         
-        print(f"Bending residues for Domain {moving_domain.domain_id}: {bending_residues}")
-        
         return bending_residues
-
-    def print_chains_superimposed_result(self):
-        # A gemmi.SupResult object containing superimposition information between 2 chains
-        print(f"RMSD =                  {self.chain_superimpose_result.rmsd}")
-        print(f"Count =                 {self.chain_superimpose_result.count}")
-        print(f"Center 1 =              {self.chain_superimpose_result.center1}")
-        print(f"Center 2 =              {self.chain_superimpose_result.center2}")
-        print(f"Translation Vector =    {self.chain_superimpose_result.transform.vec}")
-        print(f"Rotation Matrix =       {self.chain_superimpose_result.transform.mat}")
-        rot_vec = Rotation.from_matrix(self.chain_superimpose_result.transform.mat).as_rotvec(degrees=True)
-        print(f"Rotation Vector =       {rot_vec}")
-
-    def print_slide_window_superimpose_results(self, n=None):
-        if n is None or n > len(self.slide_window_superimpose_results):
-            n = len(self.slide_window_superimpose_results)
-        print(f"slide_window_superimpose_result size = {len(self.slide_window_superimpose_results)}")
-        for i in range(n):
-            item: gemmi.SupResult = self.slide_window_superimpose_results[i]
-            print(f"RMSD =                  {item.rmsd}")
-            print(f"Count =                 {item.count}")
-            print(f"Center 1 =              {item.center1}")
-            print(f"Center 2 =              {item.center2}")
-            print(f"Translation Vector =    {item.transform.vec}")
-            print(f"Rotation Matrix =       {item.transform.mat}")
-
-    def print_slide_window_residue_indices(self):
-        print(f"slide_window_residue_indices = {self.protein_1.slide_window_residues_indices}")
-
-    def print_rotation_matrices(self, n=None):
-        if n is None or n > self.rotation_mats.shape[0]:
-            n = self.rotation_mats.shape[0]
-        print(f"rotation_mats shape = {self.rotation_mats.shape}")
-        print(f"rotation_mats[0:{n}] = {self.rotation_mats[0:n]}")
-
-    #
-    # def print_chains_superimposed_result(self):
-    #     print(math.sqrt(sum([r.rmsd for r in self.chain_superimpose_result])))
-    #     # for r in self.chain_superimpose_result:
-    #     #     print(f"RMSD =                  {r.rmsd}")
-    #     #     print(f"Count =                 {r.count}")
-    #     #     print(f"Center 1 =              {r.center1}")
-    #     #     print(f"Center 2 =              {r.center2}")
-    #     #     print(f"Translation Vector =    {r.transform.vec}")
-    #     #     print(f"Rotation Matrix =       {r.transform.mat}")
 
 
 files_dict = FileMngr.read_command_file()
