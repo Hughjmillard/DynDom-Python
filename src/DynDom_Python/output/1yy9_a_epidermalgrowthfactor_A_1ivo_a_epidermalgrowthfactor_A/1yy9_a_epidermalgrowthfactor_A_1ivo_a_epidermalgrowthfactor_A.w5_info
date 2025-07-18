@@ -1,0 +1,65 @@
+DynDom Python Version 1.0
+1yy9_a_epidermalgrowthfactorA_1ivo_a_epidermalgrowthfactorA.w5
+file name of conformer 1: 1yy9_a_epidermalgrowthfactor.pdb
+chain id: A
+file name of conformer 2: 1ivo_a_epidermalgrowthfactor.pdb
+chain id: A
+window length: 5
+minimum ratio of external to internal motion: 1.0
+minimum domain size: 20
+atoms to use: ['N', 'CA', 'C']
+THERE ARE 4 DOMAINS
+================================================================================
+FIXED DOMAIN
+DOMAIN NUMBER: 	 1 (coloured red for rasmol)
+RESIDUE NUMBERS: 	312 - 510
+SIZE: 	199 RESIDUES
+BACKBONE RMSD ON THIS DOMAIN: 	0A
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO Domain 1)
+DOMAIN NUMBER: 	 3 (coloured pink for rasmol)
+RESIDUE NUMBERS: 	275 - 277, 282 - 311
+SIZE: 	33 RESIDUES
+BACKBONE RMSD ON THIS DOMAIN: 	1.739A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	1.143
+ANGLE OF ROTATION: 	115.934 DEGREES
+TRANSLATION ALONG AXIS:	-1.281 A
+SCREW AXIS DIRECTION (UNIT VECTOR): 	-0.991 	0.038 	-0.132
+POINT ON AXIS: 	21.62 	28.195 	34.224
+BENDING RESIDUES: 	269 - 275
+BENDING RESIDUES: 	277 - 278
+BENDING RESIDUES: 	281 - 282
+------------------------------------------------------------------------------
+FIXED DOMAIN - Fixed for pymol visualisation
+DOMAIN NUMBER: 	 4 (coloured blue for rasmol)
+RESIDUE NUMBERS: 	8 - 8, 231 - 231, 233 - 233, 236 - 274, 278 - 281
+SIZE: 	46 RESIDUES
+BACKBONE RMSD ON THIS DOMAIN: 	2.097A
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO Domain 4)
+DOMAIN NUMBER: 	 2 (coloured yellow for rasmol)
+RESIDUE NUMBERS: 	4 - 7, 9 - 230, 232 - 232, 234 - 235
+SIZE: 	229 RESIDUES
+BACKBONE RMSD ON THIS DOMAIN: 	1.038A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	1.874
+ANGLE OF ROTATION: 	25.707 DEGREES
+TRANSLATION ALONG AXIS:	0.556 A
+SCREW AXIS DIRECTION (UNIT VECTOR): 	0.896 	0.38 	-0.23
+POINT ON AXIS: 	18.503 	11.423 	3.115
+BENDING RESIDUES: 	7 - 9
+BENDING RESIDUES: 	230 - 236
+------------------------------------------------------------------------------
+MOVING DOMAIN (RELATIVE TO Domain 4)
+DOMAIN NUMBER: 	 3 (coloured pink for rasmol)
+RESIDUE NUMBERS: 	275 - 277, 282 - 311
+SIZE: 	33 RESIDUES
+BACKBONE RMSD ON THIS DOMAIN: 	1.739A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	1.143
+ANGLE OF ROTATION: 	33.272 DEGREES
+TRANSLATION ALONG AXIS:	1.562 A
+SCREW AXIS DIRECTION (UNIT VECTOR): 	0.104 	0.995 	0.002
+POINT ON AXIS: 	23.042 	17.753 	19.067
+BENDING RESIDUES: 	269 - 275
+BENDING RESIDUES: 	277 - 278
+BENDING RESIDUES: 	281 - 282
+------------------------------------------------------------------------------
