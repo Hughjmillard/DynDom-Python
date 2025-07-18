@@ -443,11 +443,14 @@ class Engine:
 
             # Calculate vector in direction from atoms to axis
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec) #SWAPPED was previously unit_rot_vec, unit_rotational_part
-            h_tan = 2*math.tan(0.5*rot_angle)
+            
+            h_tan = 2*math.tan(0.5*math.radians(rot_angle))
+
             atoms_to_axis_direction = (rotation_amplitude*cross_prod_axis)/h_tan
 
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
-            
+
+
             domain.rot_angle = rot_angle
             domain.disp_vec = disp_vec
             domain.point_on_axis = point_on_axis
@@ -804,7 +807,6 @@ class Engine:
         rot_vec = Rotation.from_matrix(np.asarray(r.transform.mat.tolist())).as_rotvec(degrees=True)
         unit_rot_vec = rot_vec / max(math.sqrt(np.sum(rot_vec**2)), 1e-10)
         rot_angle = np.linalg.norm(rot_vec)
-
         
         # Calculate displacement using saved coordinates
         transformed_coords = []
@@ -829,11 +831,9 @@ class Engine:
             # Calculate point on axis using the same logic as original
 
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec)
-
             h_tan = 2 * math.tan(0.5 * math.radians(rot_angle))  # rot_angle is already in degrees
             atoms_to_axis_direction = (rotation_amplitude * cross_prod_axis) / h_tan
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
-
             # Return all results as a dictionary instead of modifying domain object
             return {
                 'rot_angle': rot_angle,
