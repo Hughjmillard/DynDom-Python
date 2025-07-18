@@ -877,15 +877,11 @@ def _generate_arrow_commands(domains, fixed_domain_id, arrow_pdb_name, output_pa
     ])
     
     return commands
-
 def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name: str, chain_2, window, domain_size, ratio, atoms,
                        domains: list, analysis_pairs: list, global_reference_id: int, protein_1, pair_specific_results=None):
     """
-    Write w5_info file with hierarchical domain structure
-    FIXED: Use pair-specific screw axis results instead of domain objects
-    analysis_pairs: list of (moving_domain_id, reference_domain_id) tuples
-    global_reference_id: ID of the global reference domain
-    pair_specific_results: dict with pair-specific screw axis data
+    Write w5_info file with simplified hierarchical domain structure
+    Shows fixed domain followed by moving domains relative to it
     """
     try:
         protein_folder = f"{protein_1_name}_{chain_1}_{protein_2_name}_{chain_2}"
@@ -905,17 +901,6 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
         
         domain_colours = ["blue", "red", "yellow", "pink", "cyan", "purple", "orange", "brown", "black", "white", "magenta", "violet", "indigo", "turquoise", "coral"]
         
-        # Write global reference domain
-        global_ref_domain = domains[global_reference_id]
-        fw.write("GLOBAL REFERENCE DOMAIN\n")
-        fw.write(f"DOMAIN NUMBER: \t {global_reference_id + 1} (coloured {domain_colours[0]} for rasmol)\n")
-        
-        # Write domain residue ranges
-        residue_str = _format_domain_residues(global_ref_domain, protein_1)
-        fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
-        fw.write(f"SIZE: \t{global_ref_domain.num_residues}\n")
-        fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(global_ref_domain.rmsd, 3)}A\n")
-        
         # Group analysis pairs by reference domain
         reference_groups = {}
         for moving_id, reference_id in analysis_pairs:
@@ -923,39 +908,40 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 reference_groups[reference_id] = []
             reference_groups[reference_id].append(moving_id)
         
-        # Write analysis pairs grouped by reference domain
-        pair_count = 1
+        # Write each reference domain followed by its moving domains
         for reference_id in sorted(reference_groups.keys()):
             reference_domain = domains[reference_id]
             moving_domain_ids = reference_groups[reference_id]
             
-            fw.write("------------------------------------------------------------------------------\n")
-            
+            # Write fixed domain header
             if reference_id == global_reference_id:
-                fw.write(f"DOMAINS ANALYZED RELATIVE TO GLOBAL REFERENCE (Domain {reference_id + 1})\n")
+                fw.write("FIXED DOMAIN - Fixed for pymol visualisation\n")
             else:
-                fw.write(f"DOMAINS ANALYZED RELATIVE TO Domain {reference_id + 1}\n")
-                # Write reference domain info if it's not the global reference
-                fw.write(f"REFERENCE DOMAIN NUMBER: \t {reference_id + 1} (coloured {domain_colours[_get_domain_color_index(reference_id, global_reference_id)]} for rasmol)\n")
-                ref_residue_str = _format_domain_residues(reference_domain, protein_1)
-                fw.write(f"REFERENCE RESIDUE NUMBERS: \t{ref_residue_str}\n")
-                fw.write(f"REFERENCE SIZE: \t{reference_domain.num_residues}\n")
-                fw.write("---\n")
+                fw.write("FIXED DOMAIN\n")
+            color_index = _get_domain_color_index(reference_id, global_reference_id)
+            fw.write(f"DOMAIN NUMBER: \t {reference_id + 1} (coloured {domain_colours[color_index]} for rasmol)\n")
+            
+            # Write domain residue ranges
+            residue_str = _format_domain_residues(reference_domain, protein_1)
+            fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
+            fw.write(f"SIZE: \t{reference_domain.num_residues} RESIDUES\n")
+            fw.write(f"BACKBONE RMSD ON THIS DOMAIN: \t{round(reference_domain.rmsd, 3)}A\n")
+            fw.write("------------------------------------------------------------------------------\n")
             
             # Write each moving domain for this reference
             for moving_id in moving_domain_ids:
                 moving_domain = domains[moving_id]
                 color_index = _get_domain_color_index(moving_id, global_reference_id)
                 
-                fw.write(f"MOVING DOMAIN (RELATIVE TO Domain {reference_id + 1}), PAIR {pair_count}\n")
+                fw.write(f"MOVING DOMAIN (RELATIVE TO Domain {reference_id + 1})\n")
                 fw.write(f"DOMAIN NUMBER: \t {moving_id + 1} (coloured {domain_colours[color_index]} for rasmol)\n")
                 
                 # Write domain residue ranges
                 residue_str = _format_domain_residues(moving_domain, protein_1)
                 fw.write(f"RESIDUE NUMBERS: \t{residue_str}\n")
-                fw.write(f"SIZE: \t{moving_domain.num_residues}\n")
+                fw.write(f"SIZE: \t{moving_domain.num_residues} RESIDUES\n")
                 
-                # CRITICAL FIX: Use pair-specific results instead of domain object
+                # Use pair-specific results if available
                 pair_key = (moving_id, reference_id)
                 if pair_specific_results and pair_key in pair_specific_results:
                     pair_data = pair_specific_results[pair_key]
@@ -972,7 +958,6 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                         ratio_value = moving_domain.ratio
                 else:
                     # Fallback to domain object if pair-specific data not available
-                    print(f"Warning: No pair-specific data for ({moving_id}, {reference_id}), using domain object")
                     rot_angle = moving_domain.rot_angle
                     translation = moving_domain.translation
                     screw_axis = moving_domain.screw_axis
@@ -986,7 +971,7 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                 fw.write(f"RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: \t{round(ratio_value, 3)}\n")
                 fw.write(f"ANGLE OF ROTATION: \t{round(rot_angle, 3)} DEGREES\n")
                 fw.write(f"TRANSLATION ALONG AXIS:\t{round(translation, 3)} A\n")
-                fw.write(f"SCREW AXIS DIRECTION: \t{round(screw_axis[0], 3)} \t{round(screw_axis[1], 3)} \t{round(screw_axis[2], 3)}\n")
+                fw.write(f"SCREW AXIS DIRECTION (UNIT VECTOR): \t{round(screw_axis[0], 3)} \t{round(screw_axis[1], 3)} \t{round(screw_axis[2], 3)}\n")
                 fw.write(f"POINT ON AXIS: \t{round(point_on_axis[0], 3)} \t{round(point_on_axis[1], 3)} \t{round(point_on_axis[2], 3)}\n")
                 
                 # Write bending residues
@@ -996,15 +981,7 @@ def write_w5_info_file(output_path, protein_1_name: str, chain_1, protein_2_name
                         start_pdb_num, end_pdb_num = _convert_bend_res_to_pdb_nums(group, protein_1)
                         fw.write(f"BENDING RESIDUES: \t{start_pdb_num} - {end_pdb_num}\n")
                 
-                fw.write("---\n")
-                pair_count += 1
-        
-        # Write summary of hierarchical structure
-        fw.write("------------------------------------------------------------------------------\n")
-        fw.write("HIERARCHICAL ANALYSIS STRUCTURE:\n")
-        fw.write(f"Global Reference: Domain {global_reference_id + 1}\n")
-        for moving_id, reference_id in analysis_pairs:
-            fw.write(f"  Domain {moving_id + 1} -> analyzed relative to Domain {reference_id + 1}\n")
+                fw.write("------------------------------------------------------------------------------\n")
         
         fw.close()
         

@@ -9,42 +9,29 @@ color grey
 select domain_0, resi 310-508
 color red, domain_0  # Domain 0 (MOVING)
 
-select domain_1, resi 3-4
+select domain_1, resi 2-4
 select domain_1, domain_1 + resi 8-227
 color yellow, domain_1  # Domain 1 (MOVING)
 
 select domain_2, resi 274-274
-select domain_2, domain_2 + resi 281-308
+select domain_2, domain_2 + resi 281-309
 color pink, domain_2  # Domain 2 (MOVING)
 
-select domain_3, resi 6-6
-select domain_3, domain_3 + resi 229-229
-select domain_3, domain_3 + resi 231-231
-select domain_3, domain_3 + resi 234-272
-select domain_3, domain_3 + resi 276-279
+select domain_3, resi 235-266
+select domain_3, domain_3 + resi 277-278
 color blue, domain_3  # Domain 3 (GLOBAL REFERENCE)
 
 # Color bending residues
-select bending_residues_1, resi 2-2
+select bending_residues_1, resi 5-7
 color green, bending_residues_1
-select bending_residues_2, resi 5-5
+select bending_residues_2, resi 228-234
 color green, bending_residues_2
-select bending_residues_3, resi 7-7
+select bending_residues_3, resi 267-273
 color green, bending_residues_3
-select bending_residues_4, resi 228-228
+select bending_residues_4, resi 275-276
 color green, bending_residues_4
-select bending_residues_5, resi 230-230
+select bending_residues_5, resi 279-280
 color green, bending_residues_5
-select bending_residues_6, resi 232-233
-color green, bending_residues_6
-select bending_residues_7, resi 273-273
-color green, bending_residues_7
-select bending_residues_8, resi 275-275
-color green, bending_residues_8
-select bending_residues_9, resi 280-280
-color green, bending_residues_9
-select bending_residues_10, resi 309-309
-color green, bending_residues_10
 
 set dash_gap, 0
 set dash_radius, 0.2

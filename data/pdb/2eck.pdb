@@ -17,6 +17,7 @@ SOURCE   8 EXPRESSION_SYSTEM_GENE: ADK+
 KEYWDS    TRANSFERASE, KINASE, ATP-BINDING, PHOSPHOTRANSFERASE                  
 EXPDTA    X-RAY DIFFRACTION                                                     
 AUTHOR    M.B.BERRY,T.BILDERBACK,M.GLASER,G.N.PHILLIPS JR.                      
+REVDAT   5   14-FEB-24 2ECK    1       REMARK                                   
 REVDAT   4   07-MAR-18 2ECK    1       REMARK                                   
 REVDAT   3   13-JAN-09 2ECK    1       JRNL   VERSN                             
 REVDAT   2   03-MAY-05 2ECK    1       AUTHOR JRNL   REMARK                     

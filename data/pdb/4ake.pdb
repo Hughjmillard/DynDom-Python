@@ -14,15 +14,15 @@ SOURCE   5 EXPRESSION_SYSTEM: ESCHERICHIA COLI;
 SOURCE   6 EXPRESSION_SYSTEM_TAXID: 562;                                        
 SOURCE   7 EXPRESSION_SYSTEM_PLASMID: PAK601                                    
 KEYWDS    NUCLEOSIDE MONOPHOSPHATE KINASE, ATP:AMP PHOSPHOTRANSFERASE,          
-KEYWDS   2 MYOKINASE                                                            
+KEYWDS   2 MYOKINASE, PHOSPHOTRANSFERASE                                        
 EXPDTA    X-RAY DIFFRACTION                                                     
 AUTHOR    G.J.SCHLAUDERER,G.E.SCHULZ                                            
+REVDAT   3   28-FEB-24 4AKE    1       REMARK                                   
 REVDAT   2   24-FEB-09 4AKE    1       VERSN                                    
 REVDAT   1   10-JUN-96 4AKE    0                                                
 JRNL        AUTH   C.W.MULLER,G.J.SCHLAUDERER,J.REINSTEIN,G.E.SCHULZ            
-JRNL        TITL   ADENYLATE KINASE MOTIONS DURING CATALYSIS: AN                
-JRNL        TITL 2 ENERGETIC COUNTERWEIGHT BALANCING SUBSTRATE                  
-JRNL        TITL 3 BINDING.                                                     
+JRNL        TITL   ADENYLATE KINASE MOTIONS DURING CATALYSIS: AN ENERGETIC      
+JRNL        TITL 2 COUNTERWEIGHT BALANCING SUBSTRATE BINDING.                   
 JRNL        REF    STRUCTURE                     V.   4   147 1996              
 JRNL        REFN                   ISSN 0969-2126                               
 JRNL        PMID   8805521                                                      
@@ -30,16 +30,15 @@ JRNL        DOI    10.1016/S0969-2126(96)00018-4
 REMARK   1                                                                      
 REMARK   1 REFERENCE 1                                                          
 REMARK   1  AUTH   C.VONRHEIN,G.J.SCHLAUDERER,G.E.SCHULZ                        
-REMARK   1  TITL   MOVIE OF THE STRUCTURAL CHANGES DURING A CATALYTIC           
-REMARK   1  TITL 2 CYCLE OF NUCLEOSIDE MONOPHOSPHATE KINASES                    
+REMARK   1  TITL   MOVIE OF THE STRUCTURAL CHANGES DURING A CATALYTIC CYCLE OF  
+REMARK   1  TITL 2 NUCLEOSIDE MONOPHOSPHATE KINASES                             
 REMARK   1  REF    STRUCTURE                     V.   3   483 1995              
 REMARK   1  REFN                   ISSN 0969-2126                               
 REMARK   1 REFERENCE 2                                                          
 REMARK   1  AUTH   C.W.MULLER,G.E.SCHULZ                                        
-REMARK   1  TITL   STRUCTURE OF THE COMPLEX BETWEEN ADENYLATE KINASE            
-REMARK   1  TITL 2 FROM ESCHERICHIA COLI AND THE INHIBITOR AP5A                 
-REMARK   1  TITL 3 REFINED AT 1.9 A RESOLUTION. A MODEL FOR A                   
-REMARK   1  TITL 4 CATALYTIC TRANSITION STATE                                   
+REMARK   1  TITL   STRUCTURE OF THE COMPLEX BETWEEN ADENYLATE KINASE FROM       
+REMARK   1  TITL 2 ESCHERICHIA COLI AND THE INHIBITOR AP5A REFINED AT 1.9 A     
+REMARK   1  TITL 3 RESOLUTION. A MODEL FOR A CATALYTIC TRANSITION STATE         
 REMARK   1  REF    J.MOL.BIOL.                   V. 224   159 1992              
 REMARK   1  REFN                   ISSN 0022-2836                               
 REMARK   2                                                                      
@@ -107,7 +106,7 @@ REMARK   3   ESD FROM C-V SIGMAA          (A) : NULL
 REMARK   3                                                                      
 REMARK   3  RMS DEVIATIONS FROM IDEAL VALUES.                                   
 REMARK   3   BOND LENGTHS                 (A) : 0.012                           
-REMARK   3   BOND ANGLES            (DEGREES) : 1.70                            
+REMARK   3   BOND ANGLES            (DEGREES) : 1.700                           
 REMARK   3   DIHEDRAL ANGLES        (DEGREES) : NULL                            
 REMARK   3   IMPROPER ANGLES        (DEGREES) : NULL                            
 REMARK   3                                                                      
@@ -130,9 +129,10 @@ REMARK   3  TOPOLOGY FILE  1   : NULL
 REMARK   3                                                                      
 REMARK   3  OTHER REFINEMENT REMARKS: NULL                                      
 REMARK   4                                                                      
-REMARK   4 4AKE COMPLIES WITH FORMAT V. 3.15, 01-DEC-08                         
+REMARK   4 4AKE COMPLIES WITH FORMAT V. 3.30, 13-JUL-11                         
 REMARK 100                                                                      
 REMARK 100 THIS ENTRY HAS BEEN PROCESSED BY BNL.                                
+REMARK 100 THE DEPOSITION ID IS D_1000179257.                                   
 REMARK 200                                                                      
 REMARK 200 EXPERIMENTAL DETAILS                                                 
 REMARK 200  EXPERIMENT TYPE                : X-RAY DIFFRACTION                  
@@ -229,7 +229,6 @@ REMARK 350   BIOMT2   1  0.000000  1.000000  0.000000        0.00000
 REMARK 350   BIOMT3   1  0.000000  0.000000  1.000000        0.00000            
 REMARK 400                                                                      
 REMARK 400 COMPOUND                                                             
-REMARK 400                                                                      
 REMARK 400 THE SECONDARY STRUCTURAL ELEMENTS PRESENTED BELOW ARE FROM           
 REMARK 400 PROGRAM DSSP.  FOR MANUAL ASSIGNMENTS PLEASE SEE THE                 
 REMARK 400 PUBLICATION.                                                         
@@ -270,23 +269,9 @@ REMARK 500 (M=MODEL NUMBER; RES=RESIDUE NAME; C=CHAIN IDENTIFIER;
 REMARK 500 SSEQ=SEQUENCE NUMBER; I=INSERTION CODE).                             
 REMARK 500                                                                      
 REMARK 500  M RES CSSEQI        RMS     TYPE                                    
-REMARK 500    TYR A  24         0.08    SIDE_CHAIN                              
+REMARK 500    TYR A  24         0.08    SIDE CHAIN                              
 REMARK 500                                                                      
 REMARK 500 REMARK: NULL                                                         
-REMARK 525                                                                      
-REMARK 525 SOLVENT                                                              
-REMARK 525                                                                      
-REMARK 525 THE SOLVENT MOLECULES HAVE CHAIN IDENTIFIERS THAT                    
-REMARK 525 INDICATE THE POLYMER CHAIN WITH WHICH THEY ARE MOST                  
-REMARK 525 CLOSELY ASSOCIATED. THE REMARK LISTS ALL THE SOLVENT                 
-REMARK 525 MOLECULES WHICH ARE MORE THAN 5A AWAY FROM THE                       
-REMARK 525 NEAREST POLYMER CHAIN (M = MODEL NUMBER;                             
-REMARK 525 RES=RESIDUE NAME; C=CHAIN IDENTIFIER; SSEQ=SEQUENCE                  
-REMARK 525 NUMBER; I=INSERTION CODE):                                           
-REMARK 525                                                                      
-REMARK 525  M RES CSSEQI                                                        
-REMARK 525    HOH A 246        DISTANCE =  5.24 ANGSTROMS                       
-REMARK 525    HOH A 267        DISTANCE =  6.13 ANGSTROMS                       
 DBREF  4AKE A    1   214  UNP    P69441   KAD_ECOLI        1    214             
 DBREF  4AKE B    1   214  UNP    P69441   KAD_ECOLI        1    214             
 SEQRES   1 A  214  MET ARG ILE ILE LEU LEU GLY ALA PRO GLY ALA GLY LYS          
@@ -3830,5 +3815,5 @@ HETATM 3458  O   HOH B 286      12.329  34.095  16.314  1.00 77.22           O
 HETATM 3459  O   HOH B 287       8.485  19.881  -0.784  1.00 42.17           O  
 HETATM 3460  O   HOH B 288      -0.660   0.094  16.265  1.00 86.54           O  
 HETATM 3461  O   HOH B 289       1.413  -6.322  -9.968  1.00 69.58           O  
-MASTER      260    0    0   19   14    0    0    9 3459    2    0   34          
+MASTER      245    0    0   19   14    0    0    9 3459    2    0   34          
 END                                                                             
