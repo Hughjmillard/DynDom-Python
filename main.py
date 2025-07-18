@@ -443,11 +443,14 @@ class Engine:
 
             # Calculate vector in direction from atoms to axis
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec) #SWAPPED was previously unit_rot_vec, unit_rotational_part
-            h_tan = 2*math.tan(0.5*rot_angle)
+            
+            h_tan = 2*math.tan(0.5*math.radians(rot_angle))
+
             atoms_to_axis_direction = (rotation_amplitude*cross_prod_axis)/h_tan
 
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
-            
+
+
             domain.rot_angle = rot_angle
             domain.disp_vec = disp_vec
             domain.point_on_axis = point_on_axis
@@ -804,7 +807,6 @@ class Engine:
         rot_vec = Rotation.from_matrix(np.asarray(r.transform.mat.tolist())).as_rotvec(degrees=True)
         unit_rot_vec = rot_vec / max(math.sqrt(np.sum(rot_vec**2)), 1e-10)
         rot_angle = np.linalg.norm(rot_vec)
-
         
         # Calculate displacement using saved coordinates
         transformed_coords = []
@@ -829,11 +831,9 @@ class Engine:
             # Calculate point on axis using the same logic as original
 
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec)
-
             h_tan = 2 * math.tan(0.5 * math.radians(rot_angle))  # rot_angle is already in degrees
             atoms_to_axis_direction = (rotation_amplitude * cross_prod_axis) / h_tan
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
-
             # Return all results as a dictionary instead of modifying domain object
             return {
                 'rot_angle': rot_angle,
@@ -877,55 +877,140 @@ class Engine:
 
         r = gemmi.superpose_positions(coords_1, coords_2)
         return r
-
+    
     def determine_bending_residues_hierarchical(self):
-        """
-        Modified bending residue determination using hierarchical references
-        """
-        if not hasattr(self.clusterer, 'analysis_pairs') or not self.clusterer.analysis_pairs:
-            print("No hierarchical analysis pairs found, falling back to original method")
-            return self.determine_bending_residues()
+            """
+            Modified bending residue determination using hierarchical references
+            """
+            if not hasattr(self.clusterer, 'analysis_pairs') or not self.clusterer.analysis_pairs:
+                print("No hierarchical analysis pairs found, falling back to original method")
+                return self.determine_bending_residues()
         
-        # Get global reference domain
-        global_reference_id = self.clusterer.get_hierarchical_fixed_domain()
-        global_reference_domain = self.clusterer.domains[global_reference_id]
+            # Calculate bending residues for each domain pair
+            all_bending_residues = {}
         
-        # Calculate bending residues for each domain pair
-        all_bending_residues = {}
-        
-        for moving_domain_id, reference_domain_id in self.clusterer.analysis_pairs:
-            moving_domain = self.clusterer.domains[moving_domain_id]
-            reference_domain = self.clusterer.domains[reference_domain_id]
-            bending_residues = self.analyze_bending_residues_for_pair(moving_domain, reference_domain)
+            for moving_domain_id, reference_domain_id in self.clusterer.analysis_pairs:
+                moving_domain = self.clusterer.domains[moving_domain_id]
+                reference_domain = self.clusterer.domains[reference_domain_id]
+                bending_residues = self.analyze_bending_residues_for_pair(moving_domain, reference_domain)
             
-            if bending_residues:
-                all_bending_residues[moving_domain_id] = bending_residues
-                moving_domain.bend_res = bending_residues
+                if bending_residues:
+                    all_bending_residues[moving_domain_id] = bending_residues
+                    moving_domain.bend_res = bending_residues
         
-        # Store all bending residues
-        self.bending_residues_indices = all_bending_residues
+            # Store all bending residues
+            self.bending_residues_indices = all_bending_residues
         
-        return all_bending_residues
+            return all_bending_residues
 
     def analyze_bending_residues_for_pair(self, moving_domain, reference_domain):
         """
-        Analyze bending residues for a specific domain pair
-        This is a simplified version - you can enhance it later
+        Analyze bending residues for a specific domain pair using the same statistical approach
+        as the original method but for hierarchical pairs
         """
-        # For now, return the boundary residues between domains as bending residues
-        bending_residues = []
+        mid_point = (self.window - 1) // 2
+        q_variance = 4.6  # Same threshold as original
         
-        # Find boundary residues between the domains
-        for seg in moving_domain.segments:
-            # Add residues at the beginning and end of each segment
-            bending_residues.append(seg[0])
-            bending_residues.append(seg[1])
+        # Calculate reference domain statistics
+        reference_segments = reference_domain.segments
+        reference_rot_vecs = self.rotation_vecs[reference_segments[0][0]+mid_point:reference_segments[0][1]+mid_point]
         
-        # Remove duplicates and sort
-        bending_residues = sorted(list(set(bending_residues)))
+        for i in range(1, reference_segments.shape[0]):
+            rot_vecs = self.rotation_vecs[reference_segments[i][0]+mid_point:reference_segments[i][1]+mid_point]
+            reference_rot_vecs = np.append(reference_rot_vecs, rot_vecs, axis=0)
         
-        return bending_residues
-
+        reference_mean = np.mean(reference_rot_vecs, axis=0)
+        reference_centered_vecs = reference_rot_vecs - reference_mean
+        reference_covar = np.cov(reference_centered_vecs.T)
+        reference_inv_covar = np.linalg.inv(reference_covar)
+        
+        # Calculate moving domain statistics
+        moving_segments = moving_domain.segments
+        moving_rot_vecs = self.rotation_vecs[moving_segments[0][0]+mid_point:moving_segments[0][1]+mid_point]
+        
+        for i in range(1, moving_segments.shape[0]):
+            rot_vecs = self.rotation_vecs[moving_segments[i][0]+mid_point:moving_segments[i][1]+mid_point]
+            moving_rot_vecs = np.append(moving_rot_vecs, rot_vecs, axis=0)
+        
+        moving_mean = np.mean(moving_rot_vecs, axis=0)
+        moving_centered_vecs = moving_rot_vecs - moving_mean
+        moving_covar = np.cov(moving_centered_vecs.T)
+        moving_inv_covar = np.linalg.inv(moving_covar)
+        
+        # Find connecting segments between domains
+        bend_res_set = set()
+        
+        # Get indices for boundary analysis
+        moving_prev_indices = moving_segments[:, 0] - 1
+        moving_next_indices = moving_segments[:, 1] + 1
+        
+        # Find reference segments that connect to moving domain
+        ref_next_is_moving = np.isin(reference_segments[:, 1], moving_prev_indices)
+        ref_next_is_moving_ind = np.where(ref_next_is_moving)[0]
+        
+        ref_prev_is_moving = np.isin(reference_segments[:, 0], moving_next_indices)
+        ref_prev_is_moving_ind = np.where(ref_prev_is_moving)[0]
+        
+        # Find moving segments that connect to reference domain
+        moving_next_is_ref = np.isin(moving_next_indices, reference_segments[:, 0])
+        moving_next_is_ref_ind = np.where(moving_next_is_ref)[0]
+        
+        moving_prev_is_ref = np.isin(moving_prev_indices, reference_segments[:, 1])
+        moving_prev_is_ref_ind = np.where(moving_prev_is_ref)[0]
+        
+        # Analyze bending residues using the same 4-direction approach as original
+        
+        # 1. Go backwards through reference domain residues
+        for segment_ind in ref_next_is_moving_ind:
+            segment = reference_segments[segment_ind]
+            bend_res_set.add(segment[1])
+            for i in range(segment[1], segment[0] - 1, -1):
+                centered_vec = self.rotation_vecs[i+mid_point] - reference_mean
+                q_value = float(centered_vec @ reference_inv_covar @ centered_vec)
+                if q_value > q_variance:
+                    bend_res_set.add(i)
+                else:
+                    break
+        
+        # 2. Go forwards through moving domain residues
+        for segment_ind in moving_prev_is_ref_ind:
+            segment = moving_segments[segment_ind]
+            bend_res_set.add(segment[0])
+            for i in range(segment[0], segment[1] + 1):
+                centered_vec = self.rotation_vecs[i+mid_point] - moving_mean
+                q_value = float(centered_vec @ moving_inv_covar @ centered_vec)
+                if q_value > q_variance:
+                    bend_res_set.add(i)
+                else:
+                    break
+        
+        # 3. Go forwards through reference domain residues
+        for segment_ind in ref_prev_is_moving_ind:
+            segment = reference_segments[segment_ind]
+            bend_res_set.add(segment[0])
+            for i in range(segment[0], segment[1] + 1):
+                centered_vec = self.rotation_vecs[i+mid_point] - reference_mean
+                q_value = float(centered_vec @ reference_inv_covar @ centered_vec)
+                if q_value > q_variance:
+                    bend_res_set.add(i)
+                else:
+                    break
+        
+        # 4. Go backwards through moving domain residues
+        for segment_ind in moving_next_is_ref_ind:
+            segment = moving_segments[segment_ind]
+            bend_res_set.add(segment[1])
+            for i in range(segment[1], segment[0] - 1, -1):
+                centered_vec = self.rotation_vecs[i+mid_point] - moving_mean
+                q_value = float(centered_vec @ moving_inv_covar @ centered_vec)
+                if q_value > q_variance:
+                    bend_res_set.add(i)
+                else:
+                    break
+        
+        # Convert to sorted list
+        bend_res_list = sorted(list(bend_res_set))
+        return bend_res_list
 
 files_dict = FileMngr.read_command_file()
 # Read param file to get parameters ( window size, domain size, ratio, etc. )

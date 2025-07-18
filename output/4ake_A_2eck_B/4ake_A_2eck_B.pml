@@ -6,25 +6,25 @@ bg_color white
 color grey
 
 # === HIERARCHICAL DOMAIN STRUCTURE COLORING ===
-select domain_0, resi 116-156
+select domain_0, resi 116-152
 color red, domain_0  # Domain 0 (MOVING)
 
-select domain_1, resi 29-60
+select domain_1, resi 29-58
 color yellow, domain_1  # Domain 1 (MOVING)
 
-select domain_2, resi 1-27
-select domain_2, domain_2 + resi 62-114
-select domain_2, domain_2 + resi 158-210
+select domain_2, resi 1-25
+select domain_2, domain_2 + resi 63-111
+select domain_2, domain_2 + resi 169-210
 color blue, domain_2  # Domain 2 (GLOBAL REFERENCE)
 
 # Color bending residues
-select bending_residues_1, resi 115-115
+select bending_residues_1, resi 112-115
 color green, bending_residues_1
-select bending_residues_2, resi 157-157
+select bending_residues_2, resi 153-168
 color green, bending_residues_2
-select bending_residues_3, resi 28-28
+select bending_residues_3, resi 26-28
 color green, bending_residues_3
-select bending_residues_4, resi 61-61
+select bending_residues_4, resi 59-62
 color green, bending_residues_4
 
 set dash_gap, 0
