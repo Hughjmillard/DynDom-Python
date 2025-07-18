@@ -1,31 +1,37 @@
-# DynDom Complete Visualization
-# Domain-colored structure with screw axis arrows
+# DynDom Hierarchical Visualization
+# Domain-colored structure with hierarchical screw axis arrows
 reinitialize
 load 1adg_A_2ohx_B.pdb
 bg_color white
 color grey
 
-# === DOMAIN STRUCTURE COLORING ===
-select fixed_domain, resi 1-170
-select fixed_domain, fixed_domain + resi 317-368
-color blue, fixed_domain
+# === HIERARCHICAL DOMAIN STRUCTURE COLORING ===
+select domain_0, resi 1-173
+select domain_0, domain_0 + resi 287-287
+select domain_0, domain_0 + resi 289-293
+select domain_0, domain_0 + resi 316-368
+color blue, domain_0  # Domain 0 (GLOBAL REFERENCE)
 
-select moving_domain_1, resi 175-282
-select moving_domain_1, moving_domain_1 + resi 295-311
-color red, moving_domain_1
+select domain_1, resi 175-285
+select domain_1, domain_1 + resi 295-314
+color yellow, domain_1  # Domain 1 (MOVING)
 
 # Color bending residues
-select bending_residues_1, resi 171-174
+select bending_residues_1, resi 174-174
 color green, bending_residues_1
-select bending_residues_2, resi 283-294
+select bending_residues_2, resi 286-286
 color green, bending_residues_2
-select bending_residues_3, resi 312-316
+select bending_residues_3, resi 288-288
 color green, bending_residues_3
+select bending_residues_4, resi 294-294
+color green, bending_residues_4
+select bending_residues_5, resi 315-315
+color green, bending_residues_5
 
 set dash_gap, 0
 set dash_radius, 0.2
 
-# === SCREW AXIS ARROWS ===
+# === HIERARCHICAL SCREW AXIS ARROWS ===
 load output
 load 1adg_A_2ohx_B_arrows.pdb
 
@@ -37,22 +43,22 @@ color gray80, output
 # Hide arrow atoms initially
 hide everything, 1adg_A_2ohx_B_arrows
 
-# Arrow 1: Domain 1 (moving) relative to Domain 0 (fixed)
-# Shaft color: blue (fixed domain), Head color: red (moving domain)
+# Arrow 1: Domain 1 (moving) relative to Domain 0 (reference)
+# Shaft color: blue (reference domain), Head color: yellow (moving domain)
 # Rotation: 10.0°
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
 select head_1, chain A and resn ARH and resi 120
 
-# Display shaft as thick licorice stick (FIXED domain color: blue)
+# Display shaft as thick licorice stick (REFERENCE domain color: blue)
 show sticks, shaft_1
 color blue, shaft_1
 set stick_radius, 0.3, shaft_1
 
-# Display arrow head as clean cone (MOVING domain color: red)
+# Display arrow head as clean cone (MOVING domain color: yellow)
 show sticks, head_1
-color red, head_1
+color yellow, head_1
 set stick_radius, 0.25, head_1
 
 # Connect atoms ONLY within each section
@@ -93,6 +99,7 @@ orient
 delete bending_residues
 delete arrow_*
 
-print 'DynDom complete visualization loaded!'
-print 'Fixed domain: 0 (blue)'
-print 'Moving domain 1: red, rotation 10.0°'
+print 'DynDom hierarchical visualization loaded!'
+print 'Global reference domain: 0 (blue)'
+print 'Analysis pair 1: Domain 1 (yellow) relative to Domain 0 (blue)'
+print '  Rotation: 10.0°'

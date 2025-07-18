@@ -1,0 +1,36 @@
+DynDom Python Version 1.0
+1yy9_a_sectionA_1ivo_a_sectionA.w5
+file name of conformer 1: 1yy9_a_section.pdb
+chain id: A
+file name of conformer 2: 1ivo_a_section.pdb
+chain id: A
+window length: 5
+minimum ratio of external to internal motion: 1.0
+minimum domain size: 20
+atoms to use: ['N', 'CA', 'C']
+THERE ARE 2 DOMAINS
+================================================================================
+GLOBAL REFERENCE DOMAIN
+DOMAIN NUMBER: 	 2 (coloured blue for rasmol)
+RESIDUE NUMBERS: 	312 - 510
+SIZE: 	199
+BACKBONE RMSD ON THIS DOMAIN: 	0.916A
+------------------------------------------------------------------------------
+DOMAINS ANALYZED RELATIVE TO GLOBAL REFERENCE (Domain 2)
+MOVING DOMAIN (RELATIVE TO Domain 2), PAIR 1
+DOMAIN NUMBER: 	 1 (coloured red for rasmol)
+RESIDUE NUMBERS: 	286 - 311
+SIZE: 	26
+BACKBONE RMSD ON THIS DOMAIN: 	1.821A
+RATIO OF INTERDOMAIN TO INTRADOMAIN DISPLACEMENT: 	5.721
+ANGLE OF ROTATION: 	112.972 DEGREES
+TRANSLATION ALONG AXIS:	-1.567 A
+SCREW AXIS DIRECTION: 	-0.986 	0.047 	-0.16
+POINT ON AXIS: 	28.419 	28.07 	35.331
+BENDING RESIDUES: 	286 - 286
+BENDING RESIDUES: 	311 - 311
+---
+------------------------------------------------------------------------------
+HIERARCHICAL ANALYSIS STRUCTURE:
+Global Reference: Domain 2
+  Domain 1 -> analyzed relative to Domain 2

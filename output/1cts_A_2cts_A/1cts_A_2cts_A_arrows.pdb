@@ -1,9 +1,9 @@
-REMARK DynDom Arrow Visualization
-REMARK Shaft atoms = SHF residues
-REMARK Head atoms = ARH residues
+REMARK DynDom Hierarchical Arrow Visualization
+REMARK Shaft atoms = SHF residues (reference domain color)
+REMARK Head atoms = ARH residues (moving domain color)
 REMARK Each arrow uses separate chain ID (A, B, C...)
-REMARK Generated directly from domain analysis
-REMARK Arrow 1: Domain 0 moving relative to fixed domain 1
+REMARK Generated from hierarchical analysis pairs
+REMARK Arrow 1: Domain 0 moving relative to Domain 1
 REMARK   Chain A: Rotation angle: 19.1 degrees
 ATOM   1000  CA  SHF A 100      82.518  11.166  13.201  1.00 30.00           C
 ATOM   1001  CA  SHF A 100      82.088  11.816  13.827  1.00 30.00           C
