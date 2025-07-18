@@ -196,13 +196,6 @@ DynDom-Py implements a 7-step automated workflow with hierarchical domain analys
    - Reduce `ratio` parameter (try 0.8 or 0.6)
    - Increase `window` parameter
 
-## Citation
-
-If you use DynDom-Py in your research, please cite:
-
-```
-[Your citation will be generated when published with DOI]
-```
 
 Original DynDom algorithm:
 ```
@@ -211,15 +204,11 @@ Hayward, S. and Berendsen, H.J.C. (1998) Systematic analysis of domain motions i
 
 ## License
 
-[Add your license information here]
+BSD 3-Clause License 
+Refer to LICENSE file
 
-## Contributing
-
-[Add contribution guidelines here]
 
 ## Acknowledgments
-
-- Original DynDom algorithm by Steven Hayward and Herman Berendsen
 - GEMMI library for crystallographic computations
 - PyMOL for molecular visualization
 - scikit-learn for machine learning algorithms
