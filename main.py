@@ -1107,10 +1107,26 @@ class Engine:
             rotation_amplitude = max(math.sqrt(np.sum(rotational_part**2)), 1e-10)
             unit_rotational_part = rotational_part / rotation_amplitude
             # Calculate point on axis using the same logic as original
+
             cross_prod_axis = np.cross(unit_rotational_part, unit_rot_vec)
-            h_tan = 2 * math.tan(0.5 * rot_angle)  # rot_angle is already in degrees
+
+            print(f'Rot angle: {rot_angle:.6f} degrees')
+            print(f'Rot angle radians: {math.radians(rot_angle):.6f} radians')
+
+            h_tan_prev = 2 * math.tan(0.5 * rot_angle)
+            h_tan = 2 * math.tan(0.5 * math.radians(rot_angle))  # rot_angle is already in degrees
+            print(f'h_tan_prev: {h_tan_prev:.6f}, h_tan: {h_tan:.6f}')
+
+            atoms_to_axis_direction_prev = (rotation_amplitude * cross_prod_axis) / h_tan_prev
             atoms_to_axis_direction = (rotation_amplitude * cross_prod_axis) / h_tan
+            print(f"Atoms to axis direction (prev): {atoms_to_axis_direction_prev}")
+            print(f"Atoms to axis direction: {atoms_to_axis_direction}")
+
+            point_on_axis_prev = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction_prev
             point_on_axis = original_atom_coords + (0.5 * rotational_part) - atoms_to_axis_direction
+            print(f"Point on axis (prev): {point_on_axis_prev}")
+            print(f"Point on axis: {point_on_axis}")
+
             print(f"\n=== COORDINATE SYSTEM CHECK ===")
             print(f"Reference domain ID: {reference_domain.domain_id}")
             print(f"original_atom_coords: {original_atom_coords}")
