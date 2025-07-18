@@ -1,25 +1,30 @@
-# DynDom Complete Visualization
-# Domain-colored structure with screw axis arrows
+# DynDom Hierarchical Visualization
+# Domain-colored structure with hierarchical screw axis arrows
 reinitialize
 load calmodulin1_A_calmodulin2_B.pdb
 bg_color white
 color grey
 
-# === DOMAIN STRUCTURE COLORING ===
-select fixed_domain, resi 5-67
-color blue, fixed_domain
+# === HIERARCHICAL DOMAIN STRUCTURE COLORING ===
+select domain_0, resi 77-141
+color red, domain_0  # Domain 0 (MOVING)
 
-select moving_domain_0, resi 77-142
-color red, moving_domain_0
+select domain_1, resi 5-73
+select domain_1, domain_1 + resi 75-75
+color blue, domain_1  # Domain 1 (GLOBAL REFERENCE)
 
 # Color bending residues
-select bending_residues_1, resi 68-76
+select bending_residues_1, resi 74-74
 color green, bending_residues_1
+select bending_residues_2, resi 76-76
+color green, bending_residues_2
+select bending_residues_3, resi 142-142
+color green, bending_residues_3
 
 set dash_gap, 0
 set dash_radius, 0.2
 
-# === SCREW AXIS ARROWS ===
+# === HIERARCHICAL SCREW AXIS ARROWS ===
 load output
 load calmodulin1_A_calmodulin2_B_arrows.pdb
 
@@ -31,15 +36,15 @@ color gray80, output
 # Hide arrow atoms initially
 hide everything, calmodulin1_A_calmodulin2_B_arrows
 
-# Arrow 1: Domain 0 (moving) relative to Domain 1 (fixed)
-# Shaft color: blue (fixed domain), Head color: red (moving domain)
+# Arrow 1: Domain 0 (moving) relative to Domain 1 (reference)
+# Shaft color: blue (reference domain), Head color: red (moving domain)
 # Rotation: 154.7°
 
 # Select shaft and head atoms by chain and residue
 select shaft_1, chain A and resn SHF and resi 100
 select head_1, chain A and resn ARH and resi 120
 
-# Display shaft as thick licorice stick (FIXED domain color: blue)
+# Display shaft as thick licorice stick (REFERENCE domain color: blue)
 show sticks, shaft_1
 color blue, shaft_1
 set stick_radius, 0.3, shaft_1
@@ -87,6 +92,7 @@ orient
 delete bending_residues
 delete arrow_*
 
-print 'DynDom complete visualization loaded!'
-print 'Fixed domain: 1 (blue)'
-print 'Moving domain 0: red, rotation 154.7°'
+print 'DynDom hierarchical visualization loaded!'
+print 'Global reference domain: 1 (blue)'
+print 'Analysis pair 1: Domain 0 (red) relative to Domain 1 (blue)'
+print '  Rotation: 154.7°'

@@ -53,8 +53,6 @@ class HierarchicalDomainSystem:
         connectivity = self.build_connectivity_graph()
         remaining_domains = set(domain.domain_id for domain in self.domains)
         
-        print("Initial connectivity:", connectivity)
-        
         hierarchy = []
         
         while remaining_domains:
@@ -74,9 +72,7 @@ class HierarchicalDomainSystem:
                     candidates.append(domain_id)
             
             # TIE-BREAKING: If multiple domains have same connectivity
-            if len(candidates) > 1:
-                print(f"Tie between domains {candidates} with connectivity {max_connectivity}")
-                
+            if len(candidates) > 1:                
                 # Tie-breaker: Choose domain with most residues
                 domain_sizes = {}
                 for domain_id in candidates:
@@ -84,13 +80,8 @@ class HierarchicalDomainSystem:
                     domain_sizes[domain_id] = sum(domain.segments[:, 1] + 1 - domain.segments[:, 0])
                 
                 most_connected_domain = max(candidates, key=lambda d: domain_sizes[d])
-                
-                print(f"Tie-breaker: Selected domain {most_connected_domain} (size: {domain_sizes[most_connected_domain]} residues)")
-                
             else:
                 most_connected_domain = candidates[0]
-            
-            print(f"Selected domain {most_connected_domain} with connectivity {max_connectivity}")
             
             # Add to hierarchy
             hierarchy.append(most_connected_domain)
@@ -102,12 +93,8 @@ class HierarchicalDomainSystem:
             for domain_id in remaining_domains:
                 if most_connected_domain in connectivity[domain_id]:
                     connectivity[domain_id].remove(most_connected_domain)
-            
-            print(f"Updated connectivity after removing {most_connected_domain}:", 
-                {k: v for k, v in connectivity.items() if k in remaining_domains})
         
         self.domain_hierarchy = hierarchy
-        print(f"Final domain hierarchy: {self.domain_hierarchy}")
         return hierarchy
     
     def get_analysis_pairs(self):
@@ -130,8 +117,6 @@ class HierarchicalDomainSystem:
                 reference_id = reference_list
                 if domain_id != reference_id:
                     analysis_pairs.append((domain_id, reference_id))
-        
-        print(f"Analysis pairs: {analysis_pairs}")
         return analysis_pairs
 
     def create_reference_mapping(self):
@@ -178,25 +163,3 @@ class HierarchicalDomainSystem:
         
         return self.reference_mapping
     
-    def print_analysis_plan(self):
-        """
-        Print the analysis plan showing domain hierarchy and reference mapping
-        """
-        hierarchy = self.create_hierarchical_ordering()
-        reference_mapping = self.create_reference_mapping()
-        
-        print("\n=== HIERARCHICAL DOMAIN ANALYSIS PLAN ===")
-        print("Domain Hierarchy (processing order):", hierarchy)
-        print("\nReference Mapping:")
-        
-        for domain_id in hierarchy:
-            reference_id = reference_mapping[domain_id]
-            if domain_id == reference_id:
-                print(f"  Domain {domain_id}: GLOBAL REFERENCE (stationary)")
-            else:
-                print(f"  Domain {domain_id}: analyzed relative to Domain {reference_id}")
-        
-        print("\nAnalysis pairs:")
-        analysis_pairs = self.get_analysis_pairs()
-        for moving, reference in analysis_pairs:
-            print(f"  Domain {moving} movement → relative to Domain {reference}")

@@ -244,7 +244,7 @@ def write_arrows_pdb(output_path, base_name, analysis_pairs, domains, protein_1,
                 
             f.write("END\n")
             
-        print(f"Hierarchical arrow PDB created: {arrow_pdb_path}")
+        print(f"Arrow PDB created: {arrow_pdb_path}")
         return arrow_pdb_path
         
     except Exception as e:
@@ -257,7 +257,6 @@ def _create_arrow_atoms_hierarchical_with_data(screw_axis, point_on_axis, rot_an
     """
     Create PDB atom lines for an arrow using provided screw axis data
     """
-    print(f"Arrow {arrow_index}: Point on axis: {point_on_axis}, Screw axis: {screw_axis}")
     # Normalize the screw axis
     screw_axis = screw_axis / np.linalg.norm(screw_axis)
     
@@ -283,10 +282,6 @@ def _create_arrow_atoms_hierarchical_with_data(screw_axis, point_on_axis, rot_an
     for i in range(n_shaft_atoms):
         t = -(base_shaft_length/2 + shaft_extension) + i * shaft_spacing
         pos = point_on_axis + t * screw_axis
-        # Debug prints - add these lines
-        if i < 3:  # Only print first 3 positions
-            print(f"  Shaft atom {i}: t={t:.3f}, pos=({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
-        
         pdb_line = f"ATOM  {atom_id:5d}  CA  SHF {chain_id}{shaft_res_id:4d}    {pos[0]:8.3f}{pos[1]:8.3f}{pos[2]:8.3f}  1.00 30.00           C"
         pdb_lines.append(pdb_line)
         atom_id += 1
@@ -542,7 +537,7 @@ def write_complete_pymol_script(output_path, protein_1, protein_2_name, protein_
                 fw.write(f"print 'Analysis pair {i+1}: Domain {moving_id} ({DOMAIN_COLORS[moving_color]}) relative to Domain {ref_id} ({DOMAIN_COLORS[ref_color]})'\n")
                 fw.write(f"print '  Rotation: {moving_domain.rot_angle:.1f}°'\n")
             
-        print(f"Hierarchical PyMOL script created: {pml_file}")
+        print(f"PyMOL script created: {pml_file}")
         return pml_file
         
     except Exception as e:

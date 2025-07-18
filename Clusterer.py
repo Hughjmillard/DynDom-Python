@@ -60,7 +60,6 @@ class Clusterer:
     def cluster(self):
         fails = 0
         clusters = {0: self.rotation_vectors}
-        
         while self.current_k < self.max_k:
             centroids = self.calc_cluster_centroids(clusters)
             # KMeans the rotation vectors to obtain k number of clusters of rotation vectors
@@ -77,7 +76,7 @@ class Clusterer:
             ratio_not_met = False
             decision = None
             reason = None
-            print(f'Window size: {self.window}, k: {self.current_k}, fails: {fails} ')
+            print(f'\nWindow size: {self.window}, k: {self.current_k}, fails: {fails} ')
             # If there is a cluster where its total residue is smaller than min domain size:
             if cluster_residues_small and self.valid_domains_found:
                 # If there is a previous iteration where valid clusters and valid domain pair ratios are found, clustering
@@ -249,27 +248,6 @@ class Clusterer:
                     )
                 continue
               
-            # self.print_domains(temp_domains_1, current_k)
-            # Check which domain has the most number of connecting domains. That is the fixed domain
-            # temp_fixed_domain_id = self.find_fixed_domain(temp_domains)
-
-            # ratio_not_met = False
-            # ratios = []
-            # # For each dynamic domain, calculate the ratio of interdomain to intradomain motion
-            # for domain in temp_domains:
-            #     # Ignore the fixed domain
-            #     if domain.domain_id == temp_fixed_domain_id:
-            #         continue
-            #     # Perform a mass-weighted best fit using the dynamic and fixed domains
-            #     r, transformed_1_domains_on_2 = self.mass_weighted_fit(domain, temp_domains[temp_fixed_domain_id])
-            #     # Check the ratio of interdomain to intradomain motion
-            #     ratio_met = self.check_ratios(transformed_1_domains_on_2, domain, temp_domains[temp_fixed_domain_id])
-            #     ratios.append(domain.ratio)  # Store the calculated ratio
-                
-            #     if not ratio_met:
-            #         ratio_not_met = True
-            #         print("Ratio not met")
-            #         break
             ratio_not_met = not self.check_ratios_hierarchical(temp_domains)
 
             if ratio_not_met:
@@ -685,10 +663,6 @@ class Clusterer:
             print("No analysis pairs found - single domain or no connections")
             return True  # Single domain case
         
-        # Print the analysis plan for debugging
-        print("\n=== HIERARCHICAL ANALYSIS PLAN ===")
-        hierarchy_system.print_analysis_plan()
-        
         all_ratios_met = True
         ratios = []
         
@@ -696,7 +670,7 @@ class Clusterer:
             moving_domain = temp_domains[moving_domain_id]
             reference_domain = temp_domains[reference_domain_id]
             
-            print(f"\nAnalyzing Domain {moving_domain_id} relative to Domain {reference_domain_id}")
+            print(f"Analyzing Domain {moving_domain_id} relative to Domain {reference_domain_id}")
             
             # Perform mass-weighted fit between specific domain pair
             r, transformed_slide_window = self.mass_weighted_fit(moving_domain, reference_domain)
@@ -730,11 +704,3 @@ class Clusterer:
             # Fallback to original method
             return self.find_fixed_domain(self.domains)
 
-    def print_hierarchical_analysis(self):
-        """
-        Print the hierarchical analysis plan
-        """
-        if hasattr(self, 'hierarchy_system') and self.hierarchy_system:
-            self.hierarchy_system.print_analysis_plan()
-        else:
-            print("No hierarchical system available")
