@@ -201,14 +201,13 @@ Original DynDom algorithm:
 ```
 Hayward, S. and Berendsen, H.J.C. (1998) Systematic analysis of domain motions in proteins from conformational change: new results on citrate synthase and T4 lysozyme. Proteins 30, 144-154.
 ```
+```
+S. Hayward, R. A. Lee
+"Improvements in the analysis of domain motions in proteins from conformational change: DynDom version 1.50" J Mol Graph Model, Dec, 21(3), 181-3, 2002. 
+```
 
 ## License
 
 BSD 3-Clause License 
 Refer to LICENSE file
 
-
-## Acknowledgments
-- GEMMI library for crystallographic computations
-- PyMOL for molecular visualization
-- scikit-learn for machine learning algorithms
